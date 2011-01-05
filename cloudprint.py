@@ -102,11 +102,11 @@ class CloudPrintProxy(object):
                     'output' : 'json',
                     'printer' : name,
                     'proxy' :  self.proxy,
-                    'capabilities' : ppd,
-                    'defaults' : ppd,
+                    'capabilities' : ppd.encode('utf-8'),
+                    'defaults' : ppd.encode('utf-8'),
                     'status' : 'OK',
                     'description' : description,
-                    'capsHash' : hashlib.sha1(ppd).hexdigest(),
+                    'capsHash' : hashlib.sha1(ppd.encode('utf-8')).hexdigest(),
                 },
                 'application/x-www-form-urlencoded',
                 { 'X-CloudPrint-Proxy' : 'ArmoooIsAnOEM'},
@@ -122,11 +122,11 @@ class CloudPrintProxy(object):
                     'printerid' : printers[0]['id'],
                     'printer' : name,
                     'proxy' : self.proxy,
-                    'capabilities' : ppd,
-                    'defaults' : ppd,
+                    'capabilities' : ppd.encode('utf-8'),
+                    'defaults' : ppd.encode('utf-8'),
                     'status' : 'OK',
                     'description' : description,
-                    'capsHash' : hashlib.sha1(ppd).hexdigest(),
+                    'capsHash' : hashlib.sha1(ppd.encode('utf-8')).hexdigest(),
                 },
                 'application/x-www-form-urlencoded',
                 { 'X-CloudPrint-Proxy' : 'ArmoooIsAnOEM'},
@@ -182,6 +182,14 @@ if __name__ == '__main__':
     if not default_printer:
         raise Exception('No default printer found')
     ppd = open(cups_connection.getPPD(default_printer)).read()
+
+    #This is bad it should use the LanguageEncoding in the PPD
+    #But a lot of utf-8 PPDs seem to say they are ISOLatin1
+    try:
+        ppd = ppd.decode('utf-8')
+    except UnicodeDecodeError:
+        pass
+
     description = cups_connection.getPrinterAttributes(default_printer)['printer-info']
 
     cpp = CloudPrintProxy()

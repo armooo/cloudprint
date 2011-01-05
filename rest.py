@@ -20,7 +20,7 @@ class REST:
             return '%s:%s\nMessage: %s' % (self.name, self.code, self.msg)
 
     CONTENT_ENCODE = {
-        'text/json' : json.dumps,
+        'text/json' : lambda x: json.dumps(x, encoding='UTF-8'),
         'application/x-www-form-urlencoded' : urllib.urlencode,
     }
 
@@ -55,7 +55,8 @@ class REST:
 
         data = self.CONTENT_ENCODE[content_type](data)
 
-        headers['Content-Type'] = content_type
+        headers['Content-Type'] = content_type + '; charset=UTF-8'
+        headers['Accept-Charset'] = 'UTF-8'
         if self.auth:
             headers['Authorization'] = 'GoogleLogin auth=%s' % self.auth
 
