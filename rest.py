@@ -2,6 +2,9 @@ import httplib
 import json
 import urllib
 import urlparse
+import UserDict
+import UserList
+import UserString
 
 class REST:
     class RESTException(Exception):
@@ -25,6 +28,13 @@ class REST:
         'text/json' : json.loads,
         'application/x-www-form-urlencoded' : lambda x : dict( (k, v[0] ) for k, v in [urlparse.parse_qs(x).items()]),
         'text/plain' : lambda x : dict( l.split('=') for l in x.strip().split('\n') ),
+    }
+
+    RESULT_WRAPTERS = {
+        type({}) : UserDict.UserDict,
+        type([]) : UserList.UserList,
+        type('') : UserString.UserString,
+        type(u'') : UserString.UserString,
     }
 
     def __init__(self, host, auth=None, debug=False):
@@ -73,7 +83,14 @@ class REST:
                 raise REST.RESTException(error['Name'], error['Code'], error['Message'])
             except (ValueError, KeyError):
                 raise Exception('REST error %s: %s' % (resp.status, data))
-        return self.CONTENT_DECODE[content_type](data)
+
+        decoded_data = self.CONTENT_DECODE[content_type](data)
+        try:
+            decoded_data = self.RESULT_WRAPTERS[type(decoded_data)](decoded_data)
+        except KeyError:
+            pass
+        decoded_data.headers = dict(resp.getheaders())
+        return decoded_data
 
     def get(self, path, content_type='text/json', headers={}, response_type=None):
         return self.rest_call('GET', path, '', content_type, headers, response_type)

@@ -23,14 +23,14 @@ class CloudPrintProxy(object):
         self.printer_id = None
         self.cups= cups.Connection()
         self.proxy =  platform.node() + '-Armooo-PrintProxy'
+        self.auth_path = os.path.expanduser('~/.cloudprintauth')
 
     def get_auth(self):
         if self.auth:
             return self.auth
         if not self.auth:
-            auth_path = os.path.expanduser('~/.cloudprintauth')
-            if os.path.exists(auth_path):
-                self.auth = open(auth_path).read()
+            if os.path.exists(self.auth_path):
+                self.auth = open(self.auth_path).read()
                 return self.auth
 
             username = raw_input('Google username: ')
@@ -47,14 +47,36 @@ class CloudPrintProxy(object):
                     'source': SOURCE,
                 },
                 'application/x-www-form-urlencoded')
-            self.auth =  auth_response['Auth']
-            os.mknod(auth_path)
-            open(os.path.expanduser('~/.cloudprintauth'), 'w').write(self.auth)
+            self.set_auth(auth_response['Auth'])
             return self.auth
 
+    def set_auth(self, auth):
+            self.auth = auth
+            if not os.path.exists(self.auth_path):
+                os.mknod(self.auth_path)
+            open(self.auth_path, 'w').write(self.auth)
+
     def get_rest(self):
+        class check_new_auth(object):
+            def __init__(self, rest):
+                self.rest = rest
+
+            def __getattr__(in_self, key):
+                attr = getattr(in_self.rest, key)
+                if not attr:
+                    raise AttributeError()
+                if not hasattr(attr, '__call__'):
+                    return attr
+
+                def f(*arg, **karg):
+                    r = attr(*arg, **karg)
+                    if 'update-client-auth' in r.headers:
+                        self.set_auth(r.headers['update-client-auth'])
+                    return r
+                return f
+
         auth = self.get_auth()
-        return rest.REST('https://www.google.com', auth=auth, debug=False)
+        return check_new_auth(rest.REST('https://www.google.com', auth=auth, debug=False))
 
     def get_printers(self):
         r = self.get_rest()
