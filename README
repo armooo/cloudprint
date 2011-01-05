@@ -1,0 +1,11 @@
+Requires
+
+python 2.6 or 2.7
+pycups
+
+Usage
+
+./cloudprint.py
+Google username: username@gmail.com
+Password:
+Added Printer Brother-HL-2170W
