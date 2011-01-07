@@ -91,66 +91,73 @@ class CloudPrintProxy(object):
             { 'X-CloudPrint-Proxy' : 'ArmoooIsAnOEM'},
             'text/json'
         )
-        return printers['printers']
+        return [ PrinterProxy(self, p['id'], p['name']) for p in printers['printers'] ]
 
-    def add_update_printer(self, name, description, ppd):
+    def delete_printer(self, printer_id):
         r = self.get_rest()
-        printers = self.get_printers()
-        if not printers:
-            r.post(
-                PRINT_CLOUD_URL + 'register',
-                {
-                    'output' : 'json',
-                    'printer' : name,
-                    'proxy' :  self.proxy,
-                    'capabilities' : ppd.encode('utf-8'),
-                    'defaults' : ppd.encode('utf-8'),
-                    'status' : 'OK',
-                    'description' : description,
-                    'capsHash' : hashlib.sha1(ppd.encode('utf-8')).hexdigest(),
-                },
-                'application/x-www-form-urlencoded',
-                { 'X-CloudPrint-Proxy' : 'ArmoooIsAnOEM'},
-                'text/json'
-            )
-            if self.verbose:
-                print 'Added Printer', name
-        else:
-            r.post(
-                PRINT_CLOUD_URL + 'update',
-                {
-                    'output' : 'json',
-                    'printerid' : printers[0]['id'],
-                    'printer' : name,
-                    'proxy' : self.proxy,
-                    'capabilities' : ppd.encode('utf-8'),
-                    'defaults' : ppd.encode('utf-8'),
-                    'status' : 'OK',
-                    'description' : description,
-                    'capsHash' : hashlib.sha1(ppd.encode('utf-8')).hexdigest(),
-                },
-                'application/x-www-form-urlencoded',
-                { 'X-CloudPrint-Proxy' : 'ArmoooIsAnOEM'},
-                'text/json'
-            )
-            if self.verbose:
-                print 'Updated Printer', name
+        docs = r.post(
+            PRINT_CLOUD_URL + 'delete',
+            {
+                'output' : 'json',
+                'printerid': printer_id,
+            },
+            'application/x-www-form-urlencoded',
+            { 'X-CloudPrint-Proxy' : 'ArmoooIsAnOEM'},
+            'text/json'
+        )
+        if self.verbose:
+            print 'Deleted printer', printer_id
 
-    def get_priner_id(self):
-        if not self.printer_id:
-            printers = self.get_printers()
-            if len(printers) != 1:
-                raise Exception('I only support a single printer\nManage your printers at http://www.google.com/cloudprint')
-            self.printer_id = printers[0]['id']
-        return self.printer_id
-
-    def get_jobs(self):
+    def add_printer(self, name, description, ppd):
         r = self.get_rest()
-        printer_id = self.get_priner_id()
+        r.post(
+            PRINT_CLOUD_URL + 'register',
+            {
+                'output' : 'json',
+                'printer' : name,
+                'proxy' :  self.proxy,
+                'capabilities' : ppd.encode('utf-8'),
+                'defaults' : ppd.encode('utf-8'),
+                'status' : 'OK',
+                'description' : description,
+                'capsHash' : hashlib.sha1(ppd.encode('utf-8')).hexdigest(),
+            },
+            'application/x-www-form-urlencoded',
+            { 'X-CloudPrint-Proxy' : 'ArmoooIsAnOEM'},
+            'text/json'
+        )
+        if self.verbose:
+            print 'Added Printer', name
+
+    def update_printer(self, printer_id, name, description, ppd):
+        r = self.get_rest()
+        r.post(
+            PRINT_CLOUD_URL + 'update',
+            {
+                'output' : 'json',
+                'printerid' : printer_id,
+                'printer' : name,
+                'proxy' : self.proxy,
+                'capabilities' : ppd.encode('utf-8'),
+                'defaults' : ppd.encode('utf-8'),
+                'status' : 'OK',
+                'description' : description,
+                'capsHash' : hashlib.sha1(ppd.encode('utf-8')).hexdigest(),
+            },
+            'application/x-www-form-urlencoded',
+            { 'X-CloudPrint-Proxy' : 'ArmoooIsAnOEM'},
+            'text/json'
+        )
+        if self.verbose:
+            print 'Updated Printer', name
+
+    def get_jobs(self, printer_id):
+        r = self.get_rest()
         docs = r.post(
             PRINT_CLOUD_URL + 'fetch',
             {
-                'printerid': printer_id
+                'output' : 'json',
+                'printerid': printer_id,
             },
             'application/x-www-form-urlencoded',
             { 'X-CloudPrint-Proxy' : 'ArmoooIsAnOEM'},
@@ -175,47 +182,86 @@ class CloudPrintProxy(object):
             'text/json'
             )
 
+class PrinterProxy(object):
+    def __init__(self, cpp, printer_id, name):
+        self.cpp = cpp
+        self.id = printer_id
+        self.name = name
+
+    def get_jobs(self):
+        return self.cpp.get_jobs(self.id)
+
+    def update(self, description, ppd):
+        return self.cpp.update_printer(self.id, self.name, description, ppd)
+
+    def delete(self):
+        return self.cpp.delete_printer(self.id)
+
+
+def sync_printers(cups_connection, cpp):
+    local_printer_names = set(cups_connection.getPrinters().keys())
+    remote_printers = dict([(p.name, p) for p in cpp.get_printers()])
+    remote_printer_names = set(remote_printers)
+
+    #New printers
+    for printer_name in local_printer_names - remote_printer_names:
+        ppd = open(cups_connection.getPPD(printer_name)).read()
+        #This is bad it should use the LanguageEncoding in the PPD
+        #But a lot of utf-8 PPDs seem to say they are ISOLatin1
+        try:
+            ppd = ppd.decode('utf-8')
+        except UnicodeDecodeError:
+            pass
+        description = cups_connection.getPrinterAttributes(printer_name)['printer-info']
+        cpp.add_printer(printer_name, description, ppd)
+
+    #Existing printers
+    for printer_name in local_printer_names & remote_printer_names:
+        ppd = open(cups_connection.getPPD(printer_name)).read()
+        #This is bad it should use the LanguageEncoding in the PPD
+        #But a lot of utf-8 PPDs seem to say they are ISOLatin1
+        try:
+            ppd = ppd.decode('utf-8')
+        except UnicodeDecodeError:
+            pass
+        description = cups_connection.getPrinterAttributes(printer_name)['printer-info']
+        remote_printers[printer_name].update(description, ppd)
+
+    #Printers that have left us
+    for printer_name in remote_printer_names - local_printer_names:
+        remote_printers[printer_name].delete()
+
+def process_job(cups_connection, cpp, printer, job):
+    request = urllib2.Request(job['fileUrl'], headers={'X-CloudPrint-Proxy' : 'ArmoooIsAnOEM'})
+    pdf = urllib2.urlopen(request)
+    tmp = tempfile.NamedTemporaryFile(delete=False)
+    shutil.copyfileobj(pdf, tmp)
+    tmp.flush()
+
+    request = urllib2.Request(job['ticketUrl'], headers={
+        'X-CloudPrint-Proxy' : 'ArmoooIsAnOEM',
+        'Authorization' : 'GoogleLogin auth=%s' % cpp.get_auth()
+    })
+    options = json.loads(urllib2.urlopen(request).read())
+    del options['request']
+    options = dict( (str(k), str(v)) for k, v in options.items() )
+
+    cpp.finish_job(job['id'])
+
+    cups_connection.printFile(printer.name, tmp.name, job['title'], options)
+    os.unlink(tmp.name)
 
 if __name__ == '__main__':
 
     cups_connection = cups.Connection()
-    default_printer = cups_connection.getDefault()
-    if not default_printer:
-        raise Exception('No default printer found')
-    ppd = open(cups_connection.getPPD(default_printer)).read()
-
-    #This is bad it should use the LanguageEncoding in the PPD
-    #But a lot of utf-8 PPDs seem to say they are ISOLatin1
-    try:
-        ppd = ppd.decode('utf-8')
-    except UnicodeDecodeError:
-        pass
-
-    description = cups_connection.getPrinterAttributes(default_printer)['printer-info']
-
     cpp = CloudPrintProxy()
-    cpp.add_update_printer(default_printer, description, ppd)
 
+    sync_printers(cups_connection, cpp)
+
+    printers = cpp.get_printers()
     while True:
-        for job in cpp.get_jobs():
-            request = urllib2.Request(job['fileUrl'], headers={'X-CloudPrint-Proxy' : 'ArmoooIsAnOEM'})
-            pdf = urllib2.urlopen(request)
-            tmp = tempfile.NamedTemporaryFile(delete=False)
-            shutil.copyfileobj(pdf, tmp)
-            tmp.flush()
-
-            request = urllib2.Request(job['ticketUrl'], headers={
-                'X-CloudPrint-Proxy' : 'ArmoooIsAnOEM',
-                'Authorization' : 'GoogleLogin auth=%s' % cpp.get_auth()
-            })
-            options = json.loads(urllib2.urlopen(request).read())
-            del options['request']
-            options = dict( (str(k), str(v)) for k, v in options.items() )
-
-            cpp.finish_job(job['id'])
-
-            cups_connection.printFile(default_printer, tmp.name, job['title'], options)
-            os.unlink(tmp.name)
-
+        for printer in printers:
+            for job in printer.get_jobs():
+                process_job(cups_connection, cpp, printer, job)
         time.sleep(60)
 
