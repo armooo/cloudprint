@@ -10,6 +10,7 @@ import shutil
 import os
 import json
 import getpass
+import stat
 
 SOURCE = 'Armooo-PrintProxy-1'
 PRINT_CLOUD_SERICE_ID = 'cloudprint'
@@ -31,7 +32,9 @@ class CloudPrintProxy(object):
             return self.auth
         if not self.auth:
             if os.path.exists(self.auth_path):
-                self.auth = open(self.auth_path).read()
+                auth_file =  open(self.auth_path)
+                self.auth = auth_file.read()
+                auth_file.close()
                 return self.auth
 
             username = raw_input('Google username: ')
@@ -54,8 +57,12 @@ class CloudPrintProxy(object):
     def set_auth(self, auth):
             self.auth = auth
             if not os.path.exists(self.auth_path):
-                os.mknod(self.auth_path)
-            open(self.auth_path, 'w').write(self.auth)
+                auth_file = open(self.auth_path, 'w')
+                os.chmod(self.auth_path, stat.S_IRUSR | stat.S_IWUSR)
+                auth_file.close()
+            auth_file = open(self.auth_path, 'w')
+            auth_file.write(self.auth)
+            auth_file.close()
 
     def get_rest(self):
         class check_new_auth(object):
@@ -200,7 +207,9 @@ def sync_printers(cups_connection, cpp):
 
     #New printers
     for printer_name in local_printer_names - remote_printer_names:
-        ppd = open(cups_connection.getPPD(printer_name)).read()
+        ppd_file = open(cups_connection.getPPD(printer_name))
+        ppd = ppd_file.read()
+        ppd_file.close()
         #This is bad it should use the LanguageEncoding in the PPD
         #But a lot of utf-8 PPDs seem to say they are ISOLatin1
         try:
@@ -212,7 +221,9 @@ def sync_printers(cups_connection, cpp):
 
     #Existing printers
     for printer_name in local_printer_names & remote_printer_names:
-        ppd = open(cups_connection.getPPD(printer_name)).read()
+        ppd_file = open(cups_connection.getPPD(printer_name))
+        ppd = ppd_file.read()
+        ppd_file.close()
         #This is bad it should use the LanguageEncoding in the PPD
         #But a lot of utf-8 PPDs seem to say they are ISOLatin1
         try:
