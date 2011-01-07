@@ -21,11 +21,13 @@ class REST:
 
     CONTENT_ENCODE = {
         'text/json' : lambda x: json.dumps(x, encoding='UTF-8'),
+        'application/json' : lambda x: json.dumps(x, encoding='UTF-8'),
         'application/x-www-form-urlencoded' : urllib.urlencode,
     }
 
     CONTENT_DECODE = {
         'text/json' : json.loads,
+        'application/json' : json.loads,
         'application/x-www-form-urlencoded' : lambda x : dict( (k, v[0] ) for k, v in [urlparse.parse_qs(x).items()]),
         'text/plain' : lambda x : dict( l.split('=') for l in x.strip().split('\n') ),
     }

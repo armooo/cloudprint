@@ -89,7 +89,6 @@ class CloudPrintProxy(object):
             },
             'application/x-www-form-urlencoded',
             { 'X-CloudPrint-Proxy' : 'ArmoooIsAnOEM'},
-            'text/json'
         )
         return [ PrinterProxy(self, p['id'], p['name']) for p in printers['printers'] ]
 
@@ -103,7 +102,6 @@ class CloudPrintProxy(object):
             },
             'application/x-www-form-urlencoded',
             { 'X-CloudPrint-Proxy' : 'ArmoooIsAnOEM'},
-            'text/json'
         )
         if self.verbose:
             print 'Deleted printer', printer_id
@@ -124,7 +122,6 @@ class CloudPrintProxy(object):
             },
             'application/x-www-form-urlencoded',
             { 'X-CloudPrint-Proxy' : 'ArmoooIsAnOEM'},
-            'text/json'
         )
         if self.verbose:
             print 'Added Printer', name
@@ -146,7 +143,6 @@ class CloudPrintProxy(object):
             },
             'application/x-www-form-urlencoded',
             { 'X-CloudPrint-Proxy' : 'ArmoooIsAnOEM'},
-            'text/json'
         )
         if self.verbose:
             print 'Updated Printer', name
@@ -161,7 +157,6 @@ class CloudPrintProxy(object):
             },
             'application/x-www-form-urlencoded',
             { 'X-CloudPrint-Proxy' : 'ArmoooIsAnOEM'},
-            'text/json'
         )
 
         if not 'jobs' in docs:
@@ -174,12 +169,12 @@ class CloudPrintProxy(object):
         r.post(
             PRINT_CLOUD_URL + '/control',
             {
+                'output' : 'json',
                 'jobid': job_id,
                 'status': 'DONE',
             },
             'application/x-www-form-urlencoded',
             { 'X-CloudPrint-Proxy' : 'ArmoooIsAnOEM' },
-            'text/json'
             )
 
 class PrinterProxy(object):
