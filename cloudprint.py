@@ -238,7 +238,10 @@ def sync_printers(cups_connection, cpp):
         remote_printers[printer_name].delete()
 
 def process_job(cups_connection, cpp, printer, job):
-    request = urllib2.Request(job['fileUrl'], headers={'X-CloudPrint-Proxy' : 'ArmoooIsAnOEM'})
+    request = urllib2.Request(job['fileUrl'], headers={
+        'X-CloudPrint-Proxy' : 'ArmoooIsAnOEM',
+        'Authorization' : 'GoogleLogin auth=%s' % cpp.get_auth()
+    })
     pdf = urllib2.urlopen(request)
     tmp = tempfile.NamedTemporaryFile(delete=False)
     shutil.copyfileobj(pdf, tmp)
