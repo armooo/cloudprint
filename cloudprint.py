@@ -11,6 +11,8 @@ import os
 import json
 import getpass
 import stat
+import sys
+import getopt
 
 SOURCE = 'Armooo-PrintProxy-1'
 PRINT_CLOUD_SERICE_ID = 'cloudprint'
@@ -31,11 +33,9 @@ class CloudPrintProxy(object):
         if self.auth:
             return self.auth
         if not self.auth:
-            if os.path.exists(self.auth_path):
-                auth_file =  open(self.auth_path)
-                self.auth = auth_file.read()
-                auth_file.close()
-                return self.auth
+            auth = self.get_saved_auth()
+            if auth:
+                return auth
 
             username = raw_input('Google username: ')
             password = getpass.getpass()
@@ -52,6 +52,13 @@ class CloudPrintProxy(object):
                 },
                 'application/x-www-form-urlencoded')
             self.set_auth(auth_response['Auth'])
+            return self.auth
+
+    def get_saved_auth(self):
+        if os.path.exists(self.auth_path):
+            auth_file =  open(self.auth_path)
+            self.auth = auth_file.read()
+            auth_file.close()
             return self.auth
 
     def set_auth(self, auth):
@@ -260,17 +267,38 @@ def process_job(cups_connection, cpp, printer, job):
     cups_connection.printFile(printer.name, tmp.name, job['title'], options)
     os.unlink(tmp.name)
 
-if __name__ == '__main__':
-
-    cups_connection = cups.Connection()
-    cpp = CloudPrintProxy()
-
-    sync_printers(cups_connection, cpp)
-
-    printers = cpp.get_printers()
+def process_jobs(cups_connection, cpp, printers):
     while True:
         for printer in printers:
             for job in printer.get_jobs():
                 process_job(cups_connection, cpp, printer, job)
         time.sleep(60)
+
+if __name__ == '__main__':
+    opts, args = getopt.getopt(sys.argv[1:], 'dp:')
+    daemon = False
+    pidfile = None
+    for o, a in opts:
+        if o == '-d':
+            daemon = True
+        elif o == '-p':
+            pidfile = a
+    if not pidfile:
+        pidfile = 'cloudprint.pid'
+
+    cups_connection = cups.Connection()
+    cpp = CloudPrintProxy()
+
+    sync_printers(cups_connection, cpp)
+    printers = cpp.get_printers()
+
+    if daemon:
+        try:
+            import daemon
+        except ImportError:
+            print 'daemon module required for -d'
+            sys.exit(1)
+        daemon.daemonize(pidfile)
+
+    process_jobs(cups_connection, cpp, printers)
 
