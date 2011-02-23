@@ -274,8 +274,14 @@ def process_jobs(cups_connection, cpp, printers):
                 process_job(cups_connection, cpp, printer, job)
         time.sleep(60)
 
-if __name__ == '__main__':
-    opts, args = getopt.getopt(sys.argv[1:], 'dp:')
+def usage():
+    print sys.argv[0] + ' [-d] [-p pid_file] [-h]'
+    print '-d\t\t: enable daemon mode (requires the daemon module)'
+    print '-p pid_file\t: path to write the pid to (default cloudprint.pid)'
+    print '-h\t\t: display this help'
+
+def main():
+    opts, args = getopt.getopt(sys.argv[1:], 'dhp:')
     daemon = False
     pidfile = None
     for o, a in opts:
@@ -283,6 +289,9 @@ if __name__ == '__main__':
             daemon = True
         elif o == '-p':
             pidfile = a
+        elif o =='-h':
+            usage()
+            sys.exit()
     if not pidfile:
         pidfile = 'cloudprint.pid'
 
@@ -302,3 +311,6 @@ if __name__ == '__main__':
 
     process_jobs(cups_connection, cpp, printers)
 
+
+if __name__ == '__main__':
+    main()
