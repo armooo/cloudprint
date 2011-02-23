@@ -16,7 +16,7 @@ Usage
   -p pid_file     : path to write the pid to (default cloudprint.pid)
   -h              : display this help
 
-Options
+Example
 ---------------------------------------------------
 
 ::
