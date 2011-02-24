@@ -85,7 +85,7 @@ class REST:
                 error = self.CONTENT_DECODE[content_type](data)
                 raise REST.RESTException(error['Name'], error['Code'], error['Message'])
             except (ValueError, KeyError):
-                raise Exception('REST error %s: %s' % (resp.status, data))
+                raise REST.RESTException('REST Error', resp.status, data)
 
         decoded_data = self.CONTENT_DECODE[content_type](data)
         try:

@@ -298,7 +298,21 @@ def main():
     cups_connection = cups.Connection()
     cpp = CloudPrintProxy()
 
-    sync_printers(cups_connection, cpp)
+    #try to login
+    while True:
+        try:
+            sync_printers(cups_connection, cpp)
+            break
+        except rest.REST.RESTException, e:
+            #not a auth error
+            if e.code != 403:
+                raise
+            #don't have a stored auth key
+            if not cpp.get_saved_auth():
+                raise
+            #reset the stored auth
+            cpp.set_auth('')
+
     printers = cpp.get_printers()
 
     if daemon:
