@@ -214,17 +214,20 @@ def sync_printers(cups_connection, cpp):
 
     #New printers
     for printer_name in local_printer_names - remote_printer_names:
-        ppd_file = open(cups_connection.getPPD(printer_name))
-        ppd = ppd_file.read()
-        ppd_file.close()
-        #This is bad it should use the LanguageEncoding in the PPD
-        #But a lot of utf-8 PPDs seem to say they are ISOLatin1
         try:
-            ppd = ppd.decode('utf-8')
-        except UnicodeDecodeError:
-            pass
-        description = cups_connection.getPrinterAttributes(printer_name)['printer-info']
-        cpp.add_printer(printer_name, description, ppd)
+            ppd_file = open(cups_connection.getPPD(printer_name))
+            ppd = ppd_file.read()
+            ppd_file.close()
+            #This is bad it should use the LanguageEncoding in the PPD
+            #But a lot of utf-8 PPDs seem to say they are ISOLatin1
+            try:
+                ppd = ppd.decode('utf-8')
+            except UnicodeDecodeError:
+                pass
+            description = cups_connection.getPrinterAttributes(printer_name)['printer-info']
+            cpp.add_printer(printer_name, description, ppd)
+        except:
+            print 'Skipping ' + printer_name
 
     #Existing printers
     for printer_name in local_printer_names & remote_printer_names:
