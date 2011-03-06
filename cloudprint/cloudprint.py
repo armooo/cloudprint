@@ -226,7 +226,7 @@ def sync_printers(cups_connection, cpp):
                 pass
             description = cups_connection.getPrinterAttributes(printer_name)['printer-info']
             cpp.add_printer(printer_name, description, ppd)
-        except:
+        except cups.IPPError:
             print 'Skipping ' + printer_name
 
     #Existing printers
