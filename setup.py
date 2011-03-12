@@ -9,7 +9,7 @@ import os.path
 
 setup(
     name='cloudprint',
-    version='0.2',
+    version='0.3',
     description='Google cloud print proxy for linux/OSX',
     long_description=open('README.rst').read(),
     author='Jason Michalski',
