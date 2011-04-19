@@ -237,13 +237,10 @@ def sync_printers(cups_connection, cpp):
             ppd_file.close()
             #This is bad it should use the LanguageEncoding in the PPD
             #But a lot of utf-8 PPDs seem to say they are ISOLatin1
-            try:
-                ppd = ppd.decode('utf-8')
-            except UnicodeDecodeError:
-                pass
+            ppd = ppd.decode('utf-8')
             description = cups_connection.getPrinterAttributes(printer_name)['printer-info']
             cpp.add_printer(printer_name, description, ppd)
-        except cups.IPPError:
+        except (cups.IPPError, UnicodeDecodeError):
             print 'Skipping ' + printer_name
 
     #Existing printers
