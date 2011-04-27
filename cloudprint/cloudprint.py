@@ -191,6 +191,19 @@ class CloudPrintProxy(object):
             { 'X-CloudPrint-Proxy' : 'ArmoooIsAnOEM' },
             )
 
+    def fail_job(self, job_id):
+        r = self.get_rest()
+        r.post(
+            PRINT_CLOUD_URL + '/control',
+            {
+                'output' : 'json',
+                'jobid': job_id,
+                'status': 'ERROR',
+            },
+            'application/x-www-form-urlencoded',
+            { 'X-CloudPrint-Proxy' : 'ArmoooIsAnOEM' },
+            )
+
 class PrinterProxy(object):
     def __init__(self, cpp, printer_id, name):
         self.cpp = cpp
@@ -252,23 +265,30 @@ def process_job(cups_connection, cpp, printer, job):
         'X-CloudPrint-Proxy' : 'ArmoooIsAnOEM',
         'Authorization' : 'GoogleLogin auth=%s' % cpp.get_auth()
     })
-    pdf = urllib2.urlopen(request)
-    tmp = tempfile.NamedTemporaryFile(delete=False)
-    shutil.copyfileobj(pdf, tmp)
-    tmp.flush()
 
-    request = urllib2.Request(job['ticketUrl'], headers={
-        'X-CloudPrint-Proxy' : 'ArmoooIsAnOEM',
-        'Authorization' : 'GoogleLogin auth=%s' % cpp.get_auth()
-    })
-    options = json.loads(urllib2.urlopen(request).read())
-    del options['request']
-    options = dict( (str(k), str(v)) for k, v in options.items() )
+    try:
+        pdf = urllib2.urlopen(request)
+        tmp = tempfile.NamedTemporaryFile(delete=False)
+        shutil.copyfileobj(pdf, tmp)
+        tmp.flush()
 
-    cpp.finish_job(job['id'])
+        request = urllib2.Request(job['ticketUrl'], headers={
+            'X-CloudPrint-Proxy' : 'ArmoooIsAnOEM',
+            'Authorization' : 'GoogleLogin auth=%s' % cpp.get_auth()
+        })
+        options = json.loads(urllib2.urlopen(request).read())
+        del options['request']
+        options = dict( (str(k), str(v)) for k, v in options.items() )
 
-    cups_connection.printFile(printer.name, tmp.name, job['title'], options)
-    os.unlink(tmp.name)
+        cpp.finish_job(job['id'])
+
+        cups_connection.printFile(printer.name, tmp.name, job['title'], options)
+        os.unlink(tmp.name)
+        print "SUCCESS ",job['title']
+
+    except:
+        cpp.fail_job(job['id'])
+        print "ERROR",job['title']
 
 def process_jobs(cups_connection, cpp, printers):
     while True:
