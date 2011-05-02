@@ -13,6 +13,7 @@ Usage
 
   cloudprint [-d] [-p pid_file] [-h]
   -d              : enable daemon mode (requires the daemon module)
+  -l              : logout of the current google account
   -p pid_file     : path to write the pid to (default cloudprint.pid)
   -h              : display this help
 

@@ -56,10 +56,14 @@ class CloudPrintProxy(object):
 
     def get_saved_auth(self):
         if os.path.exists(self.auth_path):
-            auth_file =  open(self.auth_path)
+            auth_file = open(self.auth_path)
             self.auth = auth_file.read()
             auth_file.close()
             return self.auth
+
+    def del_saved_auth(self):
+        if os.path.exists(self.auth_path):
+            os.unlink(self.auth_path)
 
     def set_auth(self, auth):
             self.auth = auth
@@ -298,18 +302,22 @@ def process_jobs(cups_connection, cpp, printers):
         time.sleep(60)
 
 def usage():
-    print sys.argv[0] + ' [-d] [-p pid_file] [-h]'
+    print sys.argv[0] + ' [-d][-l][-h] [-p pid_file]'
     print '-d\t\t: enable daemon mode (requires the daemon module)'
+    print '-l\t\t: logout of the google account'
     print '-p pid_file\t: path to write the pid to (default cloudprint.pid)'
     print '-h\t\t: display this help'
 
 def main():
-    opts, args = getopt.getopt(sys.argv[1:], 'dhp:')
+    opts, args = getopt.getopt(sys.argv[1:], 'dlhp:')
     daemon = False
+    logout = False
     pidfile = None
     for o, a in opts:
         if o == '-d':
             daemon = True
+        elif o == '-l':
+            logout = True
         elif o == '-p':
             pidfile = a
         elif o =='-h':
@@ -320,6 +328,11 @@ def main():
 
     cups_connection = cups.Connection()
     cpp = CloudPrintProxy()
+
+    if logout:
+        cpp.del_saved_auth()
+        print 'logged out'
+        return
 
     #try to login
     while True:
