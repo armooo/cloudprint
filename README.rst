@@ -16,6 +16,9 @@ Usage
   -p pid_file     : path to write the pid to (default cloudprint.pid)
   -h              : display this help
 
+Google accounts with 2 step verification enabled need to use an
+`application-specific password <http://www.google.com/support/accounts/bin/static.py?page=guide.cs&guide=1056283&topic=1056286>`_.
+
 Example
 ---------------------------------------------------
 
