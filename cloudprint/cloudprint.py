@@ -353,6 +353,7 @@ def main():
             import daemon
         except ImportError:
             print 'daemon module required for -d'
+            print '\tpip install daemon'
             sys.exit(1)
         daemon.daemonize(pidfile)
 
