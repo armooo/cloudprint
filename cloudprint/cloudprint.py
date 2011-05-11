@@ -285,11 +285,11 @@ def process_job(cups_connection, cpp, printer, job):
 
         cups_connection.printFile(printer.name, tmp.name, job['title'], options)
         os.unlink(tmp.name)
-        print "SUCCESS ",job['title']
+        print "SUCCESS ",job['title'].encode('unicode-escape')
 
     except:
         cpp.fail_job(job['id'])
-        print "ERROR",job['title']
+        print "ERROR",job['title'].encode('unicode-escape')
 
 def process_jobs(cups_connection, cpp, printers):
     while True:
