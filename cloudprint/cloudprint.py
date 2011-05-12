@@ -41,16 +41,28 @@ class CloudPrintProxy(object):
             password = getpass.getpass()
 
             r = rest.REST('https://www.google.com', debug=False)
-            auth_response = r.post(
-                CLIENT_LOGIN_URL,
-                {
-                    'accountType': 'GOOGLE',
-                    'Email': username,
-                    'Passwd': password,
-                    'service': PRINT_CLOUD_SERICE_ID,
-                    'source': SOURCE,
-                },
-                'application/x-www-form-urlencoded')
+            try:
+                auth_response = r.post(
+                    CLIENT_LOGIN_URL,
+                    {
+                        'accountType': 'GOOGLE',
+                        'Email': username,
+                        'Passwd': password,
+                        'service': PRINT_CLOUD_SERICE_ID,
+                        'source': SOURCE,
+                    },
+                    'application/x-www-form-urlencoded')
+            except rest.REST.RESTException, e:
+                if 'InvalidSecondFactor' in e.msg:
+                    raise rest.REST.RESTException(
+                        '2-Step',
+                        '403',
+                        'You have 2-Step authentication enabled on your '
+                        'account. \n\nPlease visit '
+                        'https://www.google.com/accounts/IssuedAuthSubTokens '
+                        'to generate an application-specific password.'
+                    )
+
             self.set_auth(auth_response['Auth'])
             return self.auth
 
