@@ -237,6 +237,20 @@ class PrinterProxy(object):
     def delete(self):
         return self.cpp.delete_printer(self.id)
 
+class App(object):
+    def __init__(self, cups_connection=None, cpp=None, printers=None, pidfile_path=None):
+        self.cups_connection = cups_connection
+        self.cpp = cpp
+        self.printers = printers
+        self.pidfile_path = pidfile_path
+        self.stdin_path = '/dev/null'
+        self.stdout_path = '/dev/tty'
+        self.stderr_path = '/dev/tty'
+        self.pidfile_timeout = 5
+
+    def run(self):
+        process_jobs(self.cups_connection, self.cpp, self.printers)
+
 
 def sync_printers(cups_connection, cpp):
     local_printer_names = set(cups_connection.getPrinters().keys())
@@ -367,15 +381,20 @@ def main():
 
     if daemon:
         try:
-            import daemon
+            from daemon import runner
         except ImportError:
             print 'daemon module required for -d'
-            print '\tpip install daemon'
+            print '\tyum install python-daemon, or apt-get install python-daemon, or pip install python-daemon'
             sys.exit(1)
-        daemon.daemonize(pidfile)
-
-    process_jobs(cups_connection, cpp, printers)
-
+        
+        app = App(cups_connection=cups_connection,
+                  cpp=cpp, printers=printers,
+                  pidfile_path=os.path.abspath(pidfile))
+        sys.argv=[sys.argv[0], 'start']
+        daemon_runner = runner.DaemonRunner(app)
+        daemon_runner.do_action()
+    else:
+        process_jobs(cups_connection, cpp, printers)
 
 if __name__ == '__main__':
     main()
