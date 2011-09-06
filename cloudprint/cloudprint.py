@@ -307,9 +307,12 @@ def process_job(cups_connection, cpp, printer, job):
 
 def process_jobs(cups_connection, cpp, printers):
     while True:
-        for printer in printers:
-            for job in printer.get_jobs():
-                process_job(cups_connection, cpp, printer, job)
+        try:
+            for printer in printers:
+                for job in printer.get_jobs():
+                    process_job(cups_connection, cpp, printer, job)
+        except:
+            print "ERROR: Couldn't Connect to Cloud Service. Will Try again in 60 Seconds";
         time.sleep(60)
 
 def usage():
