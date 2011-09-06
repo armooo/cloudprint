@@ -62,6 +62,8 @@ class CloudPrintProxy(object):
                         'https://www.google.com/accounts/IssuedAuthSubTokens '
                         'to generate an application-specific password.'
                     )
+                else:
+                    raise
 
             self.set_auth(auth_response['Auth'])
             return self.auth
