@@ -199,7 +199,7 @@ class CloudPrintProxy(object):
     def finish_job(self, job_id):
         r = self.get_rest()
         r.post(
-            PRINT_CLOUD_URL + '/control',
+            PRINT_CLOUD_URL + 'control',
             {
                 'output' : 'json',
                 'jobid': job_id,
@@ -212,7 +212,7 @@ class CloudPrintProxy(object):
     def fail_job(self, job_id):
         r = self.get_rest()
         r.post(
-            PRINT_CLOUD_URL + '/control',
+            PRINT_CLOUD_URL + 'control',
             {
                 'output' : 'json',
                 'jobid': job_id,
