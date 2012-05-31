@@ -15,7 +15,7 @@ import sys
 import getopt
 
 SOURCE = 'Armooo-PrintProxy-1'
-PRINT_CLOUD_SERICE_ID = 'cloudprint'
+PRINT_CLOUD_SERVICE_ID = 'cloudprint'
 CLIENT_LOGIN_URL = '/accounts/ClientLogin'
 PRINT_CLOUD_URL = '/cloudprint/'
 
@@ -28,6 +28,7 @@ class CloudPrintProxy(object):
         self.cups= cups.Connection()
         self.proxy =  platform.node() + '-Armooo-PrintProxy'
         self.auth_path = os.path.expanduser('~/.cloudprintauth')
+        self.xmpp_auth_path = os.path.expanduser('~/.cloudprintsaslauth')
 
     def get_auth(self):
         if self.auth:
@@ -48,10 +49,22 @@ class CloudPrintProxy(object):
                         'accountType': 'GOOGLE',
                         'Email': username,
                         'Passwd': password,
-                        'service': PRINT_CLOUD_SERICE_ID,
+                        'service': PRINT_CLOUD_SERVICE_ID,
                         'source': SOURCE,
                     },
                     'application/x-www-form-urlencoded')
+                xmpp_response = r.post(CLIENT_LOGIN_URL,
+                    {
+                        'accountType': 'GOOGLE',
+                        'Email': username,
+                        'Passwd': password,
+                        'service': 'mail',
+                        'source': SOURCE,
+                    },
+                    'application/x-www-form-urlencoded')
+                jid = username if '@' in username else username + '@gmail.com'
+                sasl_token = ('\0%s\0%s' % (jid, xmpp_response['Auth'])).encode('base64')
+                file(self.xmpp_auth_path, 'w').write(sasl_token)
             except rest.REST.RESTException, e:
                 if 'InvalidSecondFactor' in e.msg:
                     raise rest.REST.RESTException(
@@ -325,9 +338,42 @@ def process_jobs(cups_connection, cpp, printers):
             for printer in printers:
                 for job in printer.get_jobs():
                     process_job(cups_connection, cpp, printer, job)
-        except:
+            wait_for_new_job(file(cpp.xmpp_auth_path).read())
+        except Exception, e:
+            print e
             print "ERROR: Couldn't Connect to Cloud Service. Will Try again in 60 Seconds";
-        time.sleep(60)
+            time.sleep(60)
+
+def wait_for_new_job(sasl_token):
+    # https://developers.google.com/cloud-print/docs/rawxmpp
+    import ssl, socket
+    xmpp = ssl.wrap_socket(socket.socket())
+    xmpp.connect(('talk.google.com', 5223))
+    def msg(msg=' '):
+        xmpp.write(msg)
+        while 1:
+            response = xmpp.read()
+            if response.strip():
+                return response
+    def start_stream():
+        response = msg('<stream:stream to="gmail.com" version="1.0" xmlns:stream="http://etherx.jabber.org/streams" xmlns="jabber:client">')
+        while '</stream:features>' not in response:
+            response += msg()
+    start_stream()
+    response = msg('<auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl" mechanism="X-GOOGLE-TOKEN">%s</auth>' % sasl_token)
+    assert 'success' in response, response
+    start_stream()
+    response = msg('<iq type="set"><bind xmlns="urn:ietf:params:xml:ns:xmpp-bind"><resource>%s</resource></bind></iq>' % 'ArmoooIsAnOEM')
+    assert 'result' in response, response
+    full_jid = response.split('<jid>')[1].split('</jid>')[0]
+    bare_jid = full_jid.split('/')[0]
+    response = msg('<iq type="set"><session xmlns="urn:ietf:params:xml:ns:xmpp-session"/></iq>')
+    assert 'result' in response, response
+    response = msg('<iq type="set" to="%s"><subscribe xmlns="google:push"><item channel="cloudprint.google.com" from="cloudprint.google.com"/></subscribe></iq>' % bare_jid)
+    assert 'result' in response, response
+    while 'message' not in response:
+        response = msg()
+    return response
 
 def usage():
     print sys.argv[0] + ' [-d][-l][-h] [-p pid_file]'
