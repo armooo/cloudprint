@@ -347,33 +347,27 @@ def process_jobs(cups_connection, cpp, printers):
 def wait_for_new_job(sasl_token):
     # https://developers.google.com/cloud-print/docs/rawxmpp
     import ssl, socket
+    from xml.etree.ElementTree import iterparse, tostring
     xmpp = ssl.wrap_socket(socket.socket())
     xmpp.connect(('talk.google.com', 5223))
+    parser = iterparse(xmpp, ('start', 'end'))
     def msg(msg=' '):
         xmpp.write(msg)
-        while 1:
-            response = xmpp.read()
-            if response.strip():
-                return response
-    def start_stream():
-        response = msg('<stream:stream to="gmail.com" version="1.0" xmlns:stream="http://etherx.jabber.org/streams" xmlns="jabber:client">')
-        while '</stream:features>' not in response:
-            response += msg()
-    start_stream()
-    response = msg('<auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl" mechanism="X-GOOGLE-TOKEN">%s</auth>' % sasl_token)
-    assert 'success' in response, response
-    start_stream()
-    response = msg('<iq type="set"><bind xmlns="urn:ietf:params:xml:ns:xmpp-bind"><resource>%s</resource></bind></iq>' % 'ArmoooIsAnOEM')
-    assert 'result' in response, response
-    full_jid = response.split('<jid>')[1].split('</jid>')[0]
-    bare_jid = full_jid.split('/')[0]
-    response = msg('<iq type="set"><session xmlns="urn:ietf:params:xml:ns:xmpp-session"/></iq>')
-    assert 'result' in response, response
-    response = msg('<iq type="set" to="%s"><subscribe xmlns="google:push"><item channel="cloudprint.google.com" from="cloudprint.google.com"/></subscribe></iq>' % bare_jid)
-    assert 'result' in response, response
-    while 'message' not in response:
-        response = msg()
-    return response
+        stack = 0
+        for event, el in parser:
+            if event == 'start' and el.tag.endswith('stream'):
+                continue
+            stack += 1 if event == 'start' else -1
+            if stack == 0:
+                assert not el.tag.endswith('failure') and not el.tag.endswith('error') and not el.get('type') == 'error', tostring(el)
+                return el
+    msg('<stream to="gmail.com" version="1.0" xmlns="http://etherx.jabber.org/streams">')
+    msg('<auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl" mechanism="X-GOOGLE-TOKEN">%s</auth>' % sasl_token)
+    msg('<s:stream to="gmail.com" version="1.0" xmlns:s="http://etherx.jabber.org/streams" xmlns="jabber:client">')
+    iq = msg('<iq type="set"><bind xmlns="urn:ietf:params:xml:ns:xmpp-bind"><resource>Armooo</resource></bind></iq>')
+    bare_jid = iq[0][0].text.split('/')[0]
+    msg('<iq type="set" to="%s"><subscribe xmlns="google:push"><item channel="cloudprint.google.com" from="cloudprint.google.com"/></subscribe></iq>' % bare_jid)
+    return msg()
 
 def usage():
     print sys.argv[0] + ' [-d][-l][-h] [-p pid_file]'
