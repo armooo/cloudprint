@@ -109,7 +109,6 @@ class CloudPrintAuth(object):
         return check_new_auth(rest.REST('https://www.google.com', auth=auth, debug=False))
 
 
-
 def usage():
     print sys.argv[0] + ' [-u][-p][-r][-c][-h]'
     print '-u\t\t: google account username (overwrites current auth)'
