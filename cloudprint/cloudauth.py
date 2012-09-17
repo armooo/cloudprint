@@ -146,9 +146,12 @@ def main():
 	print 'Authentification cleared'
 	sys.exit()
     if checkauth:
-	return cpp.get_saved_auth() != None
-        sys.exit()
-		
+        if os.path.exists(cpp.auth_path):
+	    print 'Authentification ok'
+            sys.exit()
+	print 'Authentification missing'	
+	sys.exit()
+
     if not username or not password:
 	print 'You must specify username and password'
         usage()
