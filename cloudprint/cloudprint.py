@@ -29,6 +29,8 @@ class CloudPrintProxy(object):
         self.proxy =  platform.node() + '-Armooo-PrintProxy'
         self.auth_path = os.path.expanduser('~/.cloudprintauth')
         self.xmpp_auth_path = os.path.expanduser('~/.cloudprintsaslauth')
+        self.username = None
+        self.password = None
 
     def get_auth(self):
         if self.auth:
@@ -38,17 +40,14 @@ class CloudPrintProxy(object):
             if auth:
                 return auth
 
-            username = raw_input('Google username: ')
-            password = getpass.getpass()
-
             r = rest.REST('https://www.google.com', debug=False)
             try:
                 auth_response = r.post(
                     CLIENT_LOGIN_URL,
                     {
                         'accountType': 'GOOGLE',
-                        'Email': username,
-                        'Passwd': password,
+                        'Email': self.username,
+                        'Passwd': self.password,
                         'service': PRINT_CLOUD_SERVICE_ID,
                         'source': SOURCE,
                     },
@@ -56,13 +55,13 @@ class CloudPrintProxy(object):
                 xmpp_response = r.post(CLIENT_LOGIN_URL,
                     {
                         'accountType': 'GOOGLE',
-                        'Email': username,
-                        'Passwd': password,
+                        'Email': self.username,
+                        'Passwd': self.password,
                         'service': 'mail',
                         'source': SOURCE,
                     },
                     'application/x-www-form-urlencoded')
-                jid = username if '@' in username else username + '@gmail.com'
+                jid = self.username if '@' in self.username else self.username + '@gmail.com'
                 sasl_token = ('\0%s\0%s' % (jid, xmpp_response['Auth'])).encode('base64')
                 file(self.xmpp_auth_path, 'w').write(sasl_token)
             except rest.REST.RESTException, e:
@@ -370,17 +369,21 @@ def wait_for_new_job(sasl_token):
     return msg()
 
 def usage():
-    print sys.argv[0] + ' [-d][-l][-h] [-p pid_file]'
+    print sys.argv[0] + ' [-d][-l][-h] [-p pid_file] [-a account_file)'
     print '-d\t\t: enable daemon mode (requires the daemon module)'
     print '-l\t\t: logout of the google account'
     print '-p pid_file\t: path to write the pid to (default cloudprint.pid)'
+    print '-a account_file\t: path to google account ident data (optional)'
+    print '\t\t account_file format:\t <Google username>'
+    print '\t\t\t\t\t <Google password>'
     print '-h\t\t: display this help'
 
 def main():
-    opts, args = getopt.getopt(sys.argv[1:], 'dlhp:')
+    opts, args = getopt.getopt(sys.argv[1:], 'dlhp:a:')
     daemon = False
     logout = False
     pidfile = None
+    accountfilepath = None
     for o, a in opts:
         if o == '-d':
             daemon = True
@@ -388,6 +391,8 @@ def main():
             logout = True
         elif o == '-p':
             pidfile = a
+        elif o == '-a':
+            accountfilepath = a
         elif o =='-h':
             usage()
             sys.exit()
@@ -401,6 +406,22 @@ def main():
         cpp.del_saved_auth()
         print 'logged out'
         return
+
+    # Check if authentification is needed
+    if not cpp.get_saved_auth():
+        if accountfilepath:
+            if os.path.exists(accountfilepath):
+                account_file = open(accountfilepath)
+                cpp.username = account_file.next().rstrip()
+                cpp.password = account_file.next().rstrip()
+                account_file.close()
+
+            else:
+                print 'Unable to find account file'
+                return
+        else:
+          cpp.username = raw_input('Google username: ')
+          cpp.password = getpass.getpass()
 
     #try to login
     while True:
