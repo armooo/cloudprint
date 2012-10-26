@@ -373,7 +373,7 @@ def usage():
     print '-d\t\t: enable daemon mode (requires the daemon module)'
     print '-l\t\t: logout of the google account'
     print '-p pid_file\t: path to write the pid to (default cloudprint.pid)'
-    print '-a account_file\t: path to google account ident data (optional)'
+    print '-a account_file\t: path to google account ident data (default ~/.cloudprintauth)'
     print '\t\t account_file format:\t <Google username>'
     print '\t\t\t\t\t <Google password>'
     print '-h\t\t: display this help'
@@ -401,6 +401,8 @@ def main():
 
     cups_connection = cups.Connection()
     cpp = CloudPrintProxy()
+    if authfile:
+        cpp.auth_path = authfile
 
     if logout:
         cpp.del_saved_auth()
