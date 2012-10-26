@@ -383,7 +383,8 @@ def main():
     daemon = False
     logout = False
     pidfile = None
-    accountfilepath = None
+    authfile = None
+    saslauthfile = None
     for o, a in opts:
         if o == '-d':
             daemon = True
@@ -392,7 +393,8 @@ def main():
         elif o == '-p':
             pidfile = a
         elif o == '-a':
-            accountfilepath = a
+            authfile = a
+            saslauthfile = authfile+".sasl"
         elif o =='-h':
             usage()
             sys.exit()
@@ -403,6 +405,7 @@ def main():
     cpp = CloudPrintProxy()
     if authfile:
         cpp.auth_path = authfile
+        cpp.xmpp_auth_path = saslauthfile
 
     if logout:
         cpp.del_saved_auth()
@@ -411,9 +414,9 @@ def main():
 
     # Check if authentification is needed
     if not cpp.get_saved_auth():
-        if accountfilepath:
-            if os.path.exists(accountfilepath):
-                account_file = open(accountfilepath)
+        if authfile:
+            if os.path.exists(authfile):
+                account_file = open(authfile)
                 cpp.username = account_file.next().rstrip()
                 cpp.password = account_file.next().rstrip()
                 account_file.close()
