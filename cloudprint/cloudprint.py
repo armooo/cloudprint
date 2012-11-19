@@ -319,7 +319,7 @@ def process_job(cups_connection, cpp, printer, job):
             'Authorization' : 'GoogleLogin auth=%s' % cpp.get_auth()
         })
         options = json.loads(urllib2.urlopen(request).read())
-        del options['request']
+        if 'request' in options: del options['request']
         options = dict( (str(k), str(v)) for k, v in options.items() )
 
         cpp.finish_job(job['id'])
