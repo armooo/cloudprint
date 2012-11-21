@@ -369,7 +369,7 @@ def wait_for_new_job(sasl_token):
     return msg()
 
 def usage():
-    print sys.argv[0] + ' [-d][-l][-h] [-p pid_file] [-a account_file)'
+    print sys.argv[0] + ' [-d][-l][-h] [-p pid_file] [-a account_file]'
     print '-d\t\t: enable daemon mode (requires the daemon module)'
     print '-l\t\t: logout of the google account'
     print '-p pid_file\t: path to write the pid to (default cloudprint.pid)'
