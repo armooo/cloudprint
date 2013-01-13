@@ -22,8 +22,8 @@ PRINT_CLOUD_SERVICE_ID = 'cloudprint'
 CLIENT_LOGIN_URL = '/accounts/ClientLogin'
 PRINT_CLOUD_URL = '/cloudprint/'
 
-LOGGER = logging.getLogger("cloudprint")
-LOGGER.setLevel( logging.INFO )
+LOGGER = logging.getLogger('cloudprint')
+LOGGER.setLevel(logging.INFO)
 
 class CloudPrintProxy(object):
 
@@ -154,7 +154,7 @@ class CloudPrintProxy(object):
             { 'X-CloudPrint-Proxy' : 'ArmoooIsAnOEM'},
         )
         if self.verbose:
-            LOGGER.info( 'Deleted printer '+ printer_id )
+            LOGGER.info('Deleted printer '+ printer_id)
 
     def add_printer(self, name, description, ppd):
         r = self.get_rest()
@@ -174,7 +174,7 @@ class CloudPrintProxy(object):
             { 'X-CloudPrint-Proxy' : 'ArmoooIsAnOEM'},
         )
         if self.verbose:
-            LOGGER.info( 'Added Printer ' + name )
+            LOGGER.info('Added Printer ' + name)
 
     def update_printer(self, printer_id, name, description, ppd):
         r = self.get_rest()
@@ -195,7 +195,7 @@ class CloudPrintProxy(object):
             { 'X-CloudPrint-Proxy' : 'ArmoooIsAnOEM'},
         )
         if self.verbose:
-            LOGGER.info( 'Updated Printer ' + name)
+            LOGGER.info('Updated Printer ' + name)
 
     def get_jobs(self, printer_id):
         r = self.get_rest()
@@ -225,7 +225,7 @@ class CloudPrintProxy(object):
             },
             'application/x-www-form-urlencoded',
             { 'X-CloudPrint-Proxy' : 'ArmoooIsAnOEM' },
-            )
+        )
 
     def fail_job(self, job_id):
         r = self.get_rest()
@@ -238,7 +238,7 @@ class CloudPrintProxy(object):
             },
             'application/x-www-form-urlencoded',
             { 'X-CloudPrint-Proxy' : 'ArmoooIsAnOEM' },
-            )
+        )
 
 class PrinterProxy(object):
     def __init__(self, cpp, printer_id, name):
@@ -287,7 +287,7 @@ def sync_printers(cups_connection, cpp):
             description = cups_connection.getPrinterAttributes(printer_name)['printer-info']
             cpp.add_printer(printer_name, description, ppd)
         except (cups.IPPError, UnicodeDecodeError):
-            LOGGER.info( 'Skipping ' + printer_name )
+            LOGGER.info('Skipping ' + printer_name)
 
     #Existing printers
     for printer_name in local_printer_names & remote_printer_names:
@@ -331,11 +331,11 @@ def process_job(cups_connection, cpp, printer, job):
 
         cups_connection.printFile(printer.name, tmp.name, job['title'], options)
         os.unlink(tmp.name)
-        LOGGER.info( "SUCCESS " + job['title'].encode('unicode-escape') )
+        LOGGER.info('SUCCESS ' + job['title'].encode('unicode-escape'))
 
     except:
         cpp.fail_job(job['id'])
-        LOGGER.error( "ERROR " + job['title'].encode('unicode-escape'))
+        LOGGER.error('ERROR ' + job['title'].encode('unicode-escape'))
 
 def process_jobs(cups_connection, cpp, printers):
     while True:
@@ -345,8 +345,7 @@ def process_jobs(cups_connection, cpp, printers):
                     process_job(cups_connection, cpp, printer, job)
             wait_for_new_job(file(cpp.xmpp_auth_path).read())
         except Exception, e:
-            LOGGER.error( e )
-            LOGGER.error( "ERROR: Couldn't Connect to Cloud Service. Will Try again in 60 Seconds" )
+            LOGGER.exception('ERROR: Could not Connect to Cloud Service. Will Try again in 60 Seconds')
             time.sleep(60)
 
 def wait_for_new_job(sasl_token):
@@ -400,7 +399,7 @@ def main():
             pidfile = a
         elif o == '-a':
             authfile = a
-            saslauthfile = authfile+".sasl"
+            saslauthfile = authfile+'.sasl'
         elif o =='-h':
             usage()
             sys.exit()
@@ -409,11 +408,11 @@ def main():
 
     # if daemon, log to syslog, otherwise log to stdout
     if daemon:
-        handler = logging.handlers.SysLogHandler( address = "/dev/log" )
-        handler.setFormatter( logging.Formatter( fmt = "cloudprint.py: %(message)s" ) )
+        handler = logging.handlers.SysLogHandler(address='/dev/log')
+        handler.setFormatter(logging.Formatter(fmt='cloudprint.py: %(message)s'))
     else:
-        handler = logging.StreamHandler( sys.stdout )
-    LOGGER.addHandler( handler )
+        handler = logging.StreamHandler(sys.stdout)
+    LOGGER.addHandler(handler)
 
 
     cups_connection = cups.Connection()
@@ -424,7 +423,7 @@ def main():
 
     if logout:
         cpp.del_saved_auth()
-        LOGGER.info( 'logged out')
+        LOGGER.info('logged out')
         return
 
     # Check if authentification is needed
@@ -437,7 +436,7 @@ def main():
                 account_file.close()
 
             else:
-                LOGGER.info( 'Unable to find account file' )
+                LOGGER.info('Unable to find account file')
                 return
         else:
           cpp.username = raw_input('Google username: ')
