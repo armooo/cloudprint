@@ -34,7 +34,7 @@ class CloudPrintProxy(object):
         self.cups= cups.Connection()
         self.proxy =  platform.node() + '-Armooo-PrintProxy'
         self.auth_path = os.path.expanduser('~/.cloudprintauth')
-        self.xmpp_auth_path = os.path.expanduser('~/.cloudprintsaslauth')
+        self.xmpp_auth_path = os.path.expanduser('~/.cloudprintauth.sasl')
         self.username = None
         self.password = None
 
