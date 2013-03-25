@@ -35,6 +35,7 @@ POLL_PERIOD=30.0
 
 LOGGER = logging.getLogger('cloudprint')
 LOGGER.setLevel(logging.INFO)
+#LOGGER.setLevel(logging.DEBUG)
 
 class CloudPrintProxy(object):
 
@@ -367,7 +368,7 @@ def process_jobs(cups_connection, cpp, printers):
 
             xmpp_conn.awaitNotification(sleeptime)
 
-        except Exception, e:
+        except Exception:
             LOGGER.exception('ERROR: Could not Connect to Cloud Service. Will Try again in 60 Seconds')
             time.sleep(60)
 
