@@ -176,6 +176,9 @@ class XmppConnection(object):
                     waittime = remaining
                     self._LOGGER.debug("%f seconds until timeout" % waittime)
 
+            if waittime < 0:
+                waittime = 0
+                    
             sock = self._xmppsock
             (r, w, e) = select.select([sock], [], [sock], waittime)
 
