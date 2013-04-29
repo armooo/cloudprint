@@ -381,14 +381,16 @@ def usage():
     print '-a account_file\t: path to google account ident data (default ~/.cloudprintauth)'
     print '\t\t account_file format:\t <Google username>'
     print '\t\t\t\t\t <Google password>'
+    print '-c\t\t: establish and store login credentials, then exit'
     print '-h\t\t: display this help'
 
 def main():
-    opts, args = getopt.getopt(sys.argv[1:], 'dlhp:a:')
+    opts, args = getopt.getopt(sys.argv[1:], 'dlhp:a:c')
     daemon = False
     logout = False
     pidfile = None
     authfile = None
+    authonly = False
     saslauthfile = None
     for o, a in opts:
         if o == '-d':
@@ -400,6 +402,8 @@ def main():
         elif o == '-a':
             authfile = a
             saslauthfile = authfile+'.sasl'
+        elif o == '-c':
+            authonly = True
         elif o =='-h':
             usage()
             sys.exit()
@@ -452,6 +456,9 @@ def main():
                 raise
             #reset the stored auth
             cpp.set_auth('')
+
+    if authonly:
+        sys.exit(0)
 
     printers = cpp.get_printers()
 
