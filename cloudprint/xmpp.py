@@ -25,8 +25,9 @@ from xml.etree.ElementTree import XMLParser, TreeBuilder
 
 LOGGER = logging.getLogger('cloudprint.xmpp')
 
+
 class XmppXmlHandler(object):
-    STREAM_TAG='{http://etherx.jabber.org/streams}stream'
+    STREAM_TAG = '{http://etherx.jabber.org/streams}stream'
 
     def __init__(self):
         self._stack = 0
@@ -63,6 +64,7 @@ class XmppXmlHandler(object):
 
         except IndexError:
             return None
+
 
 class XmppConnection(object):
     def __init__(self, keepalive_period=60.0):
@@ -112,7 +114,6 @@ class XmppConnection(object):
             # need more data; block until it becomes available
             self._read_socket()
 
-
     def _check_for_notification(self):
         """Check for any notifications which have already been received"""
         return(self._handler.get_elem() is not None)
@@ -120,7 +121,6 @@ class XmppConnection(object):
     def _send_keepalive(self):
         LOGGER.info("Sending XMPP keepalive")
         self._write_socket(" ")
-
 
     def connect(self, host, port, use_ssl, sasl_token):
         """Establish a new connection to the XMPP server"""
@@ -155,7 +155,6 @@ class XmppConnection(object):
         LOGGER.info("xmpp connection established")
         self._connected = True
 
-
     def close(self):
         """Close the connection to the XMPP server"""
         try:
@@ -169,12 +168,10 @@ class XmppConnection(object):
             self._nextkeepalive = 0
             self._wrappedsock = None
 
-
     def is_connected(self):
         """Check if we are connected to the XMPP server
         returns true if the connection is active; false otherwise"""
         return self._connected
-
 
     def await_notification(self, timeout):
         """wait for a timeout or event notification"""
@@ -223,4 +220,3 @@ class XmppConnection(object):
             except:
                 self.close()
                 raise
-
