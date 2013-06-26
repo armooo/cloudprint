@@ -21,8 +21,6 @@ import xmpp
 XMPP_SERVER_HOST = 'talk.google.com'
 XMPP_USE_SSL = True
 XMPP_SERVER_PORT = 5223
-#XMPP_SERVER_HOST = 'localhost'
-#XMPP_USE_SSL = False
 
 SOURCE = 'Armooo-PrintProxy-1'
 PRINT_CLOUD_SERVICE_ID = 'cloudprint'
@@ -189,7 +187,6 @@ class CloudPrintProxy(object):
             LOGGER.info('Added Printer ' + name)
 
     def update_printer(self, printer_id, name, description, ppd):
-        return
         r = self.get_rest()
         r.post(
             PRINT_CLOUD_URL + 'update',
@@ -357,14 +354,14 @@ def process_jobs(cups_connection, cpp, printers):
 
     while True:
         try:
+            for printer in printers:
+                for job in printer.get_jobs():
+                    process_job(cups_connection, cpp, printer, job)
+            sleeptime = POLL_PERIOD
+
             if not xmpp_conn.isConnected():
                 xmpp_conn.connect(XMPP_SERVER_HOST,XMPP_SERVER_PORT,
                                   XMPP_USE_SSL,xmpp_auth)
-
-            for printer in printers:
-                 for job in printer.get_jobs():
-                    process_job(cups_connection, cpp, printer, job)
-            sleeptime = POLL_PERIOD
 
             xmpp_conn.awaitNotification(sleeptime)
 
