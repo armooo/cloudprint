@@ -16,34 +16,32 @@
 # You should have received a copy of the GNU General Public License
 # along with cloudprint.  If not, see <http://www.gnu.org/licenses/>.
 
-import rest
-import platform
-import cups
-import hashlib
-import time
-import urllib2
-import tempfile
-import shutil
-import os
-import json
-import getpass
-import stat
-import sys
 import argparse
-import re
+import cups
+import datetime
+import hashlib
+import json
 import logging
 import logging.handlers
+import os
+import re
+import requests
+import shutil
+import stat
+import sys
+import tempfile
+import time
+import uuid
 
 import xmpp
 
 XMPP_SERVER_HOST = 'talk.google.com'
-XMPP_USE_SSL = True
 XMPP_SERVER_PORT = 5223
 
 SOURCE = 'Armooo-PrintProxy-1'
 PRINT_CLOUD_SERVICE_ID = 'cloudprint'
 CLIENT_LOGIN_URL = '/accounts/ClientLogin'
-PRINT_CLOUD_URL = '/cloudprint/'
+PRINT_CLOUD_URL = 'https://www.google.com/cloudprint/'
 
 # period in seconds with which we should poll for new jobs via the HTTP api,
 # when xmpp is connecting properly.
@@ -61,200 +59,207 @@ KEEPALIVE = 600.0
 LOGGER = logging.getLogger('cloudprint')
 LOGGER.setLevel(logging.INFO)
 
+CLIENT_ID = '607830223128-rqenc3ekjln2qi4m4ntudskhnsqn82gn.apps.googleusercontent.com'
+CLIENT_KEY = 'T0azsx2lqDztSRyPHQaERJJH'
 
-class CloudPrintProxy(object):
 
-    def __init__(self, verbose=True):
-        self.verbose = verbose
-        self.auth = None
-        self.cups = cups.Connection()
-        self.proxy = platform.node() + '-Armooo-PrintProxy'
-        self.auth_path = os.path.expanduser('~/.cloudprintauth')
-        self.xmpp_auth_path = os.path.expanduser('~/.cloudprintauth.sasl')
-        self.username = None
-        self.password = None
-        self.sleeptime = 0
-        self.storepw = False
-        self.include = []
-        self.exclude = []
+class CloudPrintAuth(object):
+    def __init__(self, auth_path):
+        self.auth_path = auth_path
+        self.guid = None
+        self.email = None
+        self.xmpp_jid = None
+        self.exp_time = None
+        self.refresh_token = None
+        self._access_token = None
 
-    def get_auth(self):
-        if self.auth:
-            return self.auth
-        if not self.auth:
-            auth = self.get_saved_auth()
-            if auth:
-                return auth
+    @property
+    def session(self):
+        s = requests.session()
+        s.params['access_token'] = self._access_token
+        s.headers['X-CloudPrint-Proxy'] = 'ArmoooIsAnOEM'
+        s.headers['Authorization'] = 'Authorization {0}'.format(self._access_token)
+        return s
 
-            r = rest.REST('https://www.google.com', debug=False)
-            try:
-                auth_response = r.post(
-                    CLIENT_LOGIN_URL,
-                    {
-                        'accountType': 'GOOGLE',
-                        'Email': self.username,
-                        'Passwd': self.password,
-                        'service': PRINT_CLOUD_SERVICE_ID,
-                        'source': SOURCE,
-                   },
-                    'application/x-www-form-urlencoded')
-                xmpp_response = r.post(
-                    CLIENT_LOGIN_URL,
-                    {
-                        'accountType': 'GOOGLE',
-                        'Email': self.username,
-                        'Passwd': self.password,
-                        'service': 'mail',
-                        'source': SOURCE,
-                   },
-                    'application/x-www-form-urlencoded'
-                )
-                jid = self.username if '@' in self.username else self.username + '@gmail.com'
-                sasl_token = ('\0%s\0%s' % (jid, xmpp_response['Auth'])).encode('base64')
-                file(self.xmpp_auth_path, 'w').write(sasl_token)
-            except rest.REST.RESTException, e:
-                if 'InvalidSecondFactor' in e.msg:
-                    raise rest.REST.RESTException(
-                        '2-Step',
-                        '403',
-                        'You have 2-Step authentication enabled on your '
-                        'account. \n\nPlease visit '
-                        'https://www.google.com/accounts/IssuedAuthSubTokens '
-                        'to generate an application-specific password.'
-                    )
-                else:
-                    raise
+    @property
+    def access_token(self):
+        if datetime.datetime.now() > self.exp_time:
+            self.refresh()
+        return self._access_token
 
-            self.set_auth(auth_response['Auth'])
-            return self.auth
+    def no_auth(self):
+        return not os.path.exists(self.auth_path)
 
-    def get_saved_auth(self):
+    def login(self, name, description, ppd):
+        self.guid = str(uuid.uuid4())
+        reg_data = requests.post(
+            PRINT_CLOUD_URL + 'register',
+            {
+                'output': 'json',
+                'printer': name,
+                'proxy':  self.guid,
+                'capabilities': ppd.encode('utf-8'),
+                'defaults': ppd.encode('utf-8'),
+                'status': 'OK',
+                'description': description,
+                'capsHash': hashlib.sha1(ppd.encode('utf-8')).hexdigest(),
+            },
+            headers={'X-CloudPrint-Proxy': 'ArmoooIsAnOEM'},
+        ).json()
+        print 'Goto {0} to clame this printer'.format(reg_data['complete_invite_url'])
+
+        end = time.time() + int(reg_data['token_duration'])
+        while time.time() < end:
+            time.sleep(10)
+            print 'trying for the win'
+            poll = requests.get(
+                reg_data['polling_url'] + CLIENT_ID,
+                headers={'X-CloudPrint-Proxy': 'ArmoooIsAnOEM'},
+            ).json()
+            if poll['success']:
+                break
+        else:
+            print 'The login request timedout'
+
+        self.xmpp_jid = poll['xmpp_jid']
+        self.email = poll['user_email']
+        print 'Printer clammed by {0}.'.format(self.email)
+
+        token = requests.post(
+            'https://accounts.google.com/o/oauth2/token',
+            data={
+                'redirect_uri': 'oob',
+                'client_id': CLIENT_ID,
+                'client_secret': CLIENT_KEY,
+                'grant_type': 'authorization_code',
+                'code': poll['authorization_code'],
+            }
+        ).json()
+
+        self.refresh_token = token['refresh_token']
+        self.refresh()
+
+        self.save()
+
+    def refresh(self):
+        token = requests.post(
+            'https://accounts.google.com/o/oauth2/token',
+            data={
+                'client_id': CLIENT_ID,
+                'client_secret': CLIENT_KEY,
+                'grant_type': 'refresh_token',
+                'refresh_token': self.refresh_token,
+            }
+        ).json()
+        self._access_token = token['access_token']
+
+        slop_time = datetime.timedelta(minutes=15)
+        expires_in = datetime.timedelta(seconds=token['expires_in'])
+        self.exp_time = datetime.datetime.now() + (expires_in - slop_time)
+
+    def load(self):
         if os.path.exists(self.auth_path):
-            auth_file = open(self.auth_path)
-            self.auth = auth_file.readline().rstrip()
-            self.username = auth_file.readline().rstrip()
-            self.password = auth_file.readline().rstrip()
-            auth_file.close()
-            return self.auth
+            with open(self.auth_path) as auth_file:
+                auth_data = json.load(auth_file)
+            self.guid = auth_data['guid']
+            self.xmpp_jid = auth_data['xmpp_jid']
+            self.email = auth_data['email']
+            self.refresh_token = auth_data['refresh_token']
 
-    def del_saved_auth(self):
+        self.refresh()
+
+    def delete(self):
         if os.path.exists(self.auth_path):
             os.unlink(self.auth_path)
 
-    def set_auth(self, auth):
-            self.auth = auth
+    def save(self):
             if not os.path.exists(self.auth_path):
-                auth_file = open(self.auth_path, 'w')
-                os.chmod(self.auth_path, stat.S_IRUSR | stat.S_IWUSR)
-                auth_file.close()
-            auth_file = open(self.auth_path, 'w')
-            auth_file.write(self.auth)
-            if self.storepw:
-                auth_file.write("\n%s\n%s\n" % (self.username, self.password))
-            auth_file.close()
+                with open(self.auth_path, 'w') as auth_file:
+                    os.chmod(self.auth_path, stat.S_IRUSR | stat.S_IWUSR)
+            with open(self.auth_path, 'w') as auth_file:
+                json.dump({
+                    'guid':  self.guid,
+                    'email': self.email,
+                    'xmpp_jid': self.xmpp_jid,
+                    'refresh_token': self.refresh_token,
+                    },
+                    auth_file
+                )
 
-    def get_rest(self):
-        class check_new_auth(object):
-            def __init__(self, rest):
-                self.rest = rest
 
-            def __getattr__(in_self, key):
-                attr = getattr(in_self.rest, key)
-                if not attr:
-                    raise AttributeError()
-                if not hasattr(attr, '__call__'):
-                    return attr
+class CloudPrintProxy(object):
 
-                def f(*arg, **karg):
-                    r = attr(*arg, **karg)
-                    if 'update-client-auth' in r.headers:
-                        LOGGER.info("Updating authentication token")
-                        self.set_auth(r.headers['update-client-auth'])
-                    return r
-                return f
-
-        auth = self.get_auth()
-        return check_new_auth(rest.REST('https://www.google.com', auth=auth, debug=False))
+    def __init__(self, auth, verbose=True):
+        self.auth = auth
+        self.verbose = verbose
+        self.sleeptime = 0
+        self.include = []
+        self.exclude = []
 
     def get_printers(self):
-        r = self.get_rest()
-        printers = r.post(
+        printers = self.auth.session.post(
             PRINT_CLOUD_URL + 'list',
             {
                 'output': 'json',
-                'proxy': self.proxy,
-           },
-            'application/x-www-form-urlencoded',
-            {'X-CloudPrint-Proxy': 'ArmoooIsAnOEM'},
-        )
+                'proxy': self.auth.guid,
+            },
+        ).json()
         return [PrinterProxy(self, p['id'], p['name']) for p in printers['printers']]
 
     def delete_printer(self, printer_id):
-        r = self.get_rest()
-        r.post(
+        self.auth.session.post(
             PRINT_CLOUD_URL + 'delete',
             {
                 'output': 'json',
                 'printerid': printer_id,
            },
-            'application/x-www-form-urlencoded',
-            {'X-CloudPrint-Proxy': 'ArmoooIsAnOEM'},
-        )
+        ).raise_for_status()
         if self.verbose:
             LOGGER.info('Deleted printer ' + printer_id)
 
     def add_printer(self, name, description, ppd):
-        r = self.get_rest()
-        r.post(
+        self.auth.session.post(
             PRINT_CLOUD_URL + 'register',
             {
                 'output': 'json',
                 'printer': name,
-                'proxy':  self.proxy,
+                'proxy':  self.auth.guid,
                 'capabilities': ppd.encode('utf-8'),
                 'defaults': ppd.encode('utf-8'),
                 'status': 'OK',
                 'description': description,
                 'capsHash': hashlib.sha1(ppd.encode('utf-8')).hexdigest(),
            },
-            'application/x-www-form-urlencoded',
-            {'X-CloudPrint-Proxy': 'ArmoooIsAnOEM'},
-        )
+        ).raise_for_status()
         if self.verbose:
             LOGGER.info('Added Printer ' + name)
 
     def update_printer(self, printer_id, name, description, ppd):
-        r = self.get_rest()
-        r.post(
+        self.auth.session.post(
             PRINT_CLOUD_URL + 'update',
             {
                 'output': 'json',
                 'printerid': printer_id,
                 'printer': name,
-                'proxy': self.proxy,
+                'proxy': self.auth.guid,
                 'capabilities': ppd.encode('utf-8'),
                 'defaults': ppd.encode('utf-8'),
                 'status': 'OK',
                 'description': description,
                 'capsHash': hashlib.sha1(ppd.encode('utf-8')).hexdigest(),
            },
-            'application/x-www-form-urlencoded',
-            {'X-CloudPrint-Proxy': 'ArmoooIsAnOEM'},
-        )
+        ).raise_for_status()
         if self.verbose:
             LOGGER.info('Updated Printer ' + name)
 
     def get_jobs(self, printer_id):
-        r = self.get_rest()
-        docs = r.post(
+        docs = self.auth.session.post(
             PRINT_CLOUD_URL + 'fetch',
             {
                 'output': 'json',
                 'printerid': printer_id,
            },
-            'application/x-www-form-urlencoded',
-            {'X-CloudPrint-Proxy': 'ArmoooIsAnOEM'},
-        )
+        ).json()
 
         if not 'jobs' in docs:
             return []
@@ -262,30 +267,28 @@ class CloudPrintProxy(object):
             return docs['jobs']
 
     def finish_job(self, job_id):
-        r = self.get_rest()
-        r.post(
+        self.auth.session.post(
             PRINT_CLOUD_URL + 'control',
             {
                 'output': 'json',
                 'jobid': job_id,
                 'status': 'DONE',
            },
-            'application/x-www-form-urlencoded',
-            {'X-CloudPrint-Proxy': 'ArmoooIsAnOEM'},
-        )
+        ).json()
+        if self.verbose:
+            LOGGER.info('Finished Job' + job_id)
 
     def fail_job(self, job_id):
-        r = self.get_rest()
-        r.post(
+        self.auth.session.post(
             PRINT_CLOUD_URL + 'control',
             {
                 'output': 'json',
                 'jobid': job_id,
                 'status': 'ERROR',
            },
-            'application/x-www-form-urlencoded',
-            {'X-CloudPrint-Proxy': 'ArmoooIsAnOEM'},
-        )
+        ).json()
+        if self.verbose:
+            LOGGER.info('Failed Job' + job_id)
 
 
 class PrinterProxy(object):
@@ -317,7 +320,7 @@ class App(object):
         self.pidfile_timeout = 5
 
     def run(self):
-        process_jobs(self.cups_connection, self.cpp, self.printers)
+        process_jobs(self.cups_connection, self.cpp)
 
 
 #True if printer name matches *any* of the regular expressions in regexps
@@ -325,11 +328,21 @@ def match_re(prn, regexps, empty=False):
     if len(regexps):
         try:
             return re.match(regexps[0], prn, re.UNICODE) or match_re(prn, regexps[1:])
-        except:
+        except Exception:
             sys.stderr.write('cloudprint: invalid regular expression: ' + regexps[0] + '\n')
             sys.exit(1)
     else:
         return empty
+
+
+def get_printer_info(cups_connection, printer_name):
+        with open(cups_connection.getPPD(printer_name)) as ppd_file:
+            ppd = ppd_file.read()
+        #This is bad it should use the LanguageEncoding in the PPD
+        #But a lot of utf-8 PPDs seem to say they are ISOLatin1
+        ppd = ppd.decode('utf-8')
+        description = cups_connection.getPrinterAttributes(printer_name)['printer-info']
+        return ppd, description
 
 
 def sync_printers(cups_connection, cpp):
@@ -344,29 +357,14 @@ def sync_printers(cups_connection, cpp):
     #New printers
     for printer_name in local_printer_names - remote_printer_names:
         try:
-            ppd_file = open(cups_connection.getPPD(printer_name))
-            ppd = ppd_file.read()
-            ppd_file.close()
-            #This is bad it should use the LanguageEncoding in the PPD
-            #But a lot of utf-8 PPDs seem to say they are ISOLatin1
-            ppd = ppd.decode('utf-8')
-            description = cups_connection.getPrinterAttributes(printer_name)['printer-info']
+            ppd, description = get_printer_info(cups_connection, printer_name)
             cpp.add_printer(printer_name, description, ppd)
         except (cups.IPPError, UnicodeDecodeError):
             LOGGER.info('Skipping ' + printer_name)
 
     #Existing printers
     for printer_name in local_printer_names & remote_printer_names:
-        ppd_file = open(cups_connection.getPPD(printer_name))
-        ppd = ppd_file.read()
-        ppd_file.close()
-        #This is bad it should use the LanguageEncoding in the PPD
-        #But a lot of utf-8 PPDs seem to say they are ISOLatin1
-        try:
-            ppd = ppd.decode('utf-8')
-        except UnicodeDecodeError:
-            pass
-        description = cups_connection.getPrinterAttributes(printer_name)['printer-info']
+        ppd, description = get_printer_info(cups_connection, printer_name)
         remote_printers[printer_name].update(description, ppd)
 
     #Printers that have left us
@@ -375,22 +373,13 @@ def sync_printers(cups_connection, cpp):
 
 
 def process_job(cups_connection, cpp, printer, job):
-    request = urllib2.Request(job['fileUrl'], headers={
-        'X-CloudPrint-Proxy': 'ArmoooIsAnOEM',
-        'Authorization': 'GoogleLogin auth=%s' % cpp.get_auth()
-   })
-
     try:
-        pdf = urllib2.urlopen(request)
+        pdf = cpp.auth.session.get(job['fileUrl'], stream=True)
         tmp = tempfile.NamedTemporaryFile(delete=False)
-        shutil.copyfileobj(pdf, tmp)
+        shutil.copyfileobj(pdf.raw, tmp)
         tmp.flush()
 
-        request = urllib2.Request(job['ticketUrl'], headers={
-            'X-CloudPrint-Proxy': 'ArmoooIsAnOEM',
-            'Authorization': 'GoogleLogin auth=%s' % cpp.get_auth()
-       })
-        options = json.loads(urllib2.urlopen(request).read())
+        options = cpp.auth.session.get(job['ticketUrl']).json()
         if 'request' in options:
             del options['request']
 
@@ -402,40 +391,30 @@ def process_job(cups_connection, cpp, printer, job):
         os.unlink(tmp.name)
         LOGGER.info('SUCCESS ' + job['title'].encode('unicode-escape'))
 
-    except:
+    except Exception:
         cpp.fail_job(job['id'])
-        LOGGER.error('ERROR ' + job['title'].encode('unicode-escape'))
+        LOGGER.exception('ERROR ' + job['title'].encode('unicode-escape'))
 
 
-def process_jobs(cups_connection, cpp, printers):
-    xmpp_auth = file(cpp.xmpp_auth_path).read()
+def process_jobs(cups_connection, cpp):
     xmpp_conn = xmpp.XmppConnection(keepalive_period=KEEPALIVE)
 
     while True:
+        printers = cpp.get_printers()
         try:
             for printer in printers:
                 for job in printer.get_jobs():
                     process_job(cups_connection, cpp, printer, job)
 
             if not xmpp_conn.is_connected():
-                xmpp_conn.connect(XMPP_SERVER_HOST, XMPP_SERVER_PORT,
-                                  XMPP_USE_SSL, xmpp_auth)
+                xmpp_conn.connect(XMPP_SERVER_HOST, XMPP_SERVER_PORT, cpp.auth)
 
             xmpp_conn.await_notification(cpp.sleeptime)
 
-        except:
+        except Exception:
             global FAIL_RETRY
-            LOGGER.error('ERROR: Could not Connect to Cloud Service. Will Try again in %d Seconds' % FAIL_RETRY)
+            LOGGER.exception('ERROR: Could not Connect to Cloud Service. Will Try again in %d Seconds' % FAIL_RETRY)
             time.sleep(FAIL_RETRY)
-
-        if cpp.username and not xmpp_conn.is_connected():
-            LOGGER.debug('Refreshing authentication')
-            cpp.set_auth('')
-            try:
-                cpp.get_auth()
-                xmpp_auth = file(cpp.xmpp_auth_path).read()
-            except:
-                LOGGER.debug('Error refreshing authentication')
 
 
 def main():
@@ -446,14 +425,12 @@ def main():
                         help='logout of the google account')
     parser.add_argument('-p', metavar='pid_file', dest='pidfile', default='cloudprint.pid',
                         help='path to write the pid to (default %(default)s)')
-    parser.add_argument('-a', metavar='account_file', dest='authfile', default=os.path.expanduser('~/.cloudprintauth'),
+    parser.add_argument('-a', metavar='account_file', dest='authfile', default=os.path.expanduser('~/.cloudprintauth.json'),
                         help='path to google account ident data (default %(default)s)')
     parser.add_argument('-c', dest='authonly', action='store_true',
                         help='establish and store login credentials, then exit')
     parser.add_argument('-f', dest='fastpoll', action='store_true',
                         help='use fast poll if notifications are not working')
-    parser.add_argument('-u', dest='storepw', action='store_true',
-                        help='store username/password in addition to login token')
     parser.add_argument('-i', metavar='regexp', dest='include', default=[], action='append',
                         help='include local printers matching %(metavar)s')
     parser.add_argument('-x', metavar='regexp', dest='exclude', default=[], action='append',
@@ -474,52 +451,38 @@ def main():
         LOGGER.info('Setting DEBUG-level logging')
         LOGGER.setLevel(logging.DEBUG)
 
+    auth = CloudPrintAuth(args.authfile)
+    if args.logout:
+        auth.delete()
+        LOGGER.info('logged out')
+        return
+
     cups_connection = cups.Connection()
-    cpp = CloudPrintProxy()
-    if args.authfile:
-        cpp.auth_path = args.authfile
-        cpp.xmpp_auth_path = args.authfile+'.sasl'
+    cpp = CloudPrintProxy(auth)
 
     cpp.sleeptime = POLL_PERIOD
     if args.fastpoll:
         cpp.sleeptime = FAST_POLL_PERIOD
 
-    if args.storepw:
-        cpp.storepw = True
-
-    if args.logout:
-        cpp.del_saved_auth()
-        LOGGER.info('logged out')
-        return
-
-    # Check if password authentification is needed
-    if not cpp.get_saved_auth():
-        if args.authfile is None or not os.path.exists(args.authfile):
-            cpp.username = raw_input('Google username: ')
-            cpp.password = getpass.getpass()
-
     cpp.include = args.include
     cpp.exclude = args.exclude
 
-    #try to login
-    while True:
-        try:
-            sync_printers(cups_connection, cpp)
-            break
-        except rest.REST.RESTException, e:
-            #not a auth error
-            if e.code != 403:
-                raise
-            #don't have a stored auth key
-            if not cpp.get_saved_auth():
-                raise
-            #reset the stored auth
-            cpp.set_auth('')
+    printers = cups_connection.getPrinters().keys()
+    if not printers:
+        LOGGER.error('No printers found')
+        return
+
+    if auth.no_auth():
+        name = printers[0]
+        ppd, description = get_printer_info(cups_connection, name)
+        auth.login(name, description, ppd)
+    else:
+        auth.load()
+
+    sync_printers(cups_connection, cpp)
 
     if args.authonly:
         sys.exit(0)
-
-    printers = cpp.get_printers()
 
     if args.daemon:
         try:
@@ -529,14 +492,17 @@ def main():
             print '\tyum install python-daemon, or apt-get install python-daemon, or pip install python-daemon'
             sys.exit(1)
 
-        app = App(cups_connection=cups_connection,
-                  cpp=cpp, printers=printers,
-                  pidfile_path=os.path.abspath(args.pidfile))
+        # XXX printers is the google list
+        app = App(
+            cups_connection=cups_connection,
+            cpp=cpp,
+            pidfile_path=os.path.abspath(args.pidfile)
+        )
         sys.argv = [sys.argv[0], 'start']
         daemon_runner = runner.DaemonRunner(app)
         daemon_runner.do_action()
     else:
-        process_jobs(cups_connection, cpp, printers)
+        process_jobs(cups_connection, cpp)
 
 if __name__ == '__main__':
     main()

@@ -1,5 +1,4 @@
 # Copyright 2014 Jason Michalski <armooo@armooo.net>
-#
 # This file is part of cloudprint.
 #
 # cloudprint is free software: you can redistribute it and/or modify
@@ -14,6 +13,7 @@
 #
 # You should have received a copy of the GNU General Public License
 
+import base64
 import logging
 import ssl
 import socket
@@ -122,7 +122,7 @@ class XmppConnection(object):
         LOGGER.info("Sending XMPP keepalive")
         self._write_socket(" ")
 
-    def connect(self, host, port, use_ssl, sasl_token):
+    def connect(self, host, port, auth):
         """Establish a new connection to the XMPP server"""
         # first close any existing socket
         self.close()
@@ -131,10 +131,10 @@ class XmppConnection(object):
                     (host, port))
         self._xmppsock = socket.socket()
         self._wrappedsock = self._xmppsock
+        auth_string = base64.b64encode('\0{0}\0{1}'.format(auth.xmpp_jid, auth.access_token))
 
         try:
-            if use_ssl:
-                self._wrappedsock = ssl.wrap_socket(self._xmppsock)
+            self._wrappedsock = ssl.wrap_socket(self._xmppsock)
             self._wrappedsock.connect((host, port))
 
             self._handler = XmppXmlHandler()
@@ -142,9 +142,9 @@ class XmppConnection(object):
 
             # https://developers.google.com/cloud-print/docs/rawxmpp
             self._msg('<stream:stream to="gmail.com" xml:lang="en" version="1.0" xmlns:stream="http://etherx.jabber.org/streams" xmlns="jabber:client">')
-            self._msg('<auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl" mechanism="X-GOOGLE-TOKEN" auth:allow-generated-jid="true" auth:client-uses-full-bind-result="true" xmlns:auth="http://www.google.com/talk/protocol/auth">%s</auth>' % sasl_token)
+            self._msg('<auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl" mechanism="X-OAUTH2">%s</auth>' % auth_string)
             self._msg('<stream:stream to="gmail.com" xml:lang="en" version="1.0" xmlns:stream="http://etherx.jabber.org/streams" xmlns="jabber:client">')
-            iq = self._msg('<iq type="set" id="0"><bind xmlns="urn:ietf:params:xml:ns:xmpp-bind"><resource>Armooo</resource></bind></iq>')
+            iq = self._msg('<iq type="set" id="0"><bind xmlns="urn:ietf:params:xml:ns:xmpp-bind"><resource>cloud_print</resource></bind></iq>')
             bare_jid = iq[0][0].text.split('/')[0]
             self._msg('<iq type="set" id="2"><session xmlns="urn:ietf:params:xml:ns:xmpp-session"/></iq>')
             self._msg('<iq type="set" id="3" to="%s"><subscribe xmlns="google:push"><item channel="cloudprint.google.com" from="cloudprint.google.com"/></subscribe></iq>' % bare_jid)
