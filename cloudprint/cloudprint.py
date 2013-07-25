@@ -350,7 +350,7 @@ def process_job(cups_connection, cpp, printer, job):
 
 def process_jobs(cups_connection, cpp, printers):
     xmpp_auth = file(cpp.xmpp_auth_path).read()
-    xmpp_conn = xmpp.XmppConnection(LOGGER)
+    xmpp_conn = xmpp.XmppConnection()
 
     while True:
         try:
@@ -359,11 +359,11 @@ def process_jobs(cups_connection, cpp, printers):
                     process_job(cups_connection, cpp, printer, job)
             sleeptime = POLL_PERIOD
 
-            if not xmpp_conn.isConnected():
+            if not xmpp_conn.is_connected():
                 xmpp_conn.connect(XMPP_SERVER_HOST,XMPP_SERVER_PORT,
                                   XMPP_USE_SSL,xmpp_auth)
 
-            xmpp_conn.awaitNotification(sleeptime)
+            xmpp_conn.await_notification(sleeptime)
 
         except Exception:
             LOGGER.exception('ERROR: Could not Connect to Cloud Service. Will Try again in 60 Seconds')
