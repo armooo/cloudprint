@@ -18,6 +18,7 @@ Usage
   -a account_file : path to google account ident data (optional)
                     account_file format:  <Google username>
                                           <Google password>
+  -c              : establish and store login credentials, then exit
   -h              : display this help
 
 Google accounts with 2 step verification enabled need to use an
