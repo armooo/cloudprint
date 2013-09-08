@@ -436,8 +436,8 @@ def main():
                 account_file.close()
 
             else:
-                LOGGER.info('Unable to find account file')
-                return
+                cpp.username = raw_input('Google username: ')
+                cpp.password = getpass.getpass()
         else:
           cpp.username = raw_input('Google username: ')
           cpp.password = getpass.getpass()
