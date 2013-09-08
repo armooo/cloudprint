@@ -428,16 +428,12 @@ def main():
 
     # Check if authentification is needed
     if not cpp.get_saved_auth():
-        if authfile:
-            if os.path.exists(authfile):
-                account_file = open(authfile)
-                cpp.username = account_file.next().rstrip()
-                cpp.password = account_file.next().rstrip()
-                account_file.close()
+        if authfile and os.path.exists(authfile):
+            account_file = open(authfile)
+            cpp.username = account_file.next().rstrip()
+            cpp.password = account_file.next().rstrip()
+            account_file.close()
 
-            else:
-                cpp.username = raw_input('Google username: ')
-                cpp.password = getpass.getpass()
         else:
           cpp.username = raw_input('Google username: ')
           cpp.password = getpass.getpass()
