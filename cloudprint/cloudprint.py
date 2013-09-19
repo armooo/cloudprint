@@ -27,7 +27,8 @@ PRINT_CLOUD_SERVICE_ID = 'cloudprint'
 CLIENT_LOGIN_URL = '/accounts/ClientLogin'
 PRINT_CLOUD_URL = '/cloudprint/'
 
-# period in seconds with which we should poll for new jobs via the HTTP api.
+# period in seconds with which we should poll for new jobs via the HTTP api,
+# when xmpp is connecting properly.
 # 'None' to poll only on startup and when we get XMPP notifications.
 POLL_PERIOD=30.0
 
@@ -356,7 +357,7 @@ def process_job(cups_connection, cpp, printer, job):
 
 def process_jobs(cups_connection, cpp, printers):
     xmpp_auth = file(cpp.xmpp_auth_path).read()
-    xmpp_conn = xmpp.XmppConnection()
+    xmpp_conn = xmpp.XmppConnection(keepalive_period=KEEPALIVE)
 
     while True:
         try:
@@ -372,8 +373,9 @@ def process_jobs(cups_connection, cpp, printers):
             xmpp_conn.await_notification(sleeptime)
 
         except Exception:
-            LOGGER.exception('ERROR: Could not Connect to Cloud Service. Will Try again in 60 Seconds')
-            time.sleep(60)
+            global FAIL_RETRY
+            LOGGER.exception('ERROR: Could not Connect to Cloud Service. Will Try again in %d Seconds') % FAIL_RETRY
+            time.sleep(FAIL_RETRY)
 
 
 def usage():

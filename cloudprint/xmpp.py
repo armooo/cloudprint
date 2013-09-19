@@ -7,9 +7,6 @@ import time
 from collections import deque
 from xml.etree.ElementTree import XMLParser, TreeBuilder
 
-# frequency with which to send keepalives
-KEEPALIVE_PERIOD=60.0
-
 LOGGER = logging.getLogger('cloudprint.xmpp')
 
 class XmppXmlHandler(object):
@@ -46,9 +43,10 @@ class XmppXmlHandler(object):
             return None
 
 class XmppConnection(object):
-    def __init__(self):
+    def __init__(self, keepalive_period=60.0):
         self._connected = False
         self._wrappedsock = None
+        self._keepalive_period = keepalive_period
 
     def _read_socket(self):
         """read pending data from the socket, and send it to the XML parser.
@@ -63,7 +61,7 @@ class XmppConnection(object):
             raise
 
         LOGGER.debug('<<< %s' % data)
-        self._nextkeepalive = time.time() + KEEPALIVE_PERIOD
+        self._nextkeepalive = time.time() + self._keepalive_period
         self._xmlparser.feed(data)
 
     def _write_socket(self, msg):
@@ -71,7 +69,7 @@ class XmppConnection(object):
         LOGGER.debug('>>> %s' % msg)
         try:
             self._wrappedsock.sendall(msg)
-            self._nextkeepalive = time.time() + KEEPALIVE_PERIOD
+            self._nextkeepalive = time.time() + self._keepalive_period
         except Exception:
             self._conected = False
             raise
