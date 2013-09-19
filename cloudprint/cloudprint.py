@@ -31,6 +31,12 @@ PRINT_CLOUD_URL = '/cloudprint/'
 # 'None' to poll only on startup and when we get XMPP notifications.
 POLL_PERIOD=30.0
 
+# wait period to retry when xmpp fails
+FAIL_RETRY=60
+
+# how often, in seconds, to send a keepalive character over xmpp
+KEEPALIVE=600.0
+
 LOGGER = logging.getLogger('cloudprint')
 LOGGER.setLevel(logging.INFO)
 #LOGGER.setLevel(logging.DEBUG)
