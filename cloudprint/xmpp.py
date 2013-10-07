@@ -57,7 +57,7 @@ class XmppConnection(object):
                 # socket closed
                 raise Exception("xmpp socket closed")
         except Exception:
-            self._conected = False
+            self._connected = False
             raise
 
         LOGGER.debug('<<< %s' % data)
@@ -71,7 +71,7 @@ class XmppConnection(object):
             self._wrappedsock.sendall(msg)
             self._nextkeepalive = time.time() + self._keepalive_period
         except Exception:
-            self._conected = False
+            self._connected = False
             raise
 
     def _msg(self, msg=None):
