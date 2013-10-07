@@ -30,7 +30,7 @@ PRINT_CLOUD_URL = '/cloudprint/'
 # period in seconds with which we should poll for new jobs via the HTTP api,
 # when xmpp is connecting properly.
 # 'None' to poll only on startup and when we get XMPP notifications.
-POLL_PERIOD=30.0
+POLL_PERIOD=3600.0
 
 # wait period to retry when xmpp fails
 FAIL_RETRY=60
