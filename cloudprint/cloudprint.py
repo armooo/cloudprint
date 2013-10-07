@@ -372,7 +372,7 @@ def process_jobs(cups_connection, cpp, printers):
 
             xmpp_conn.await_notification(sleeptime)
 
-        except Exception:
+        except:
             global FAIL_RETRY
             LOGGER.exception('ERROR: Could not Connect to Cloud Service. Will Try again in %d Seconds') % FAIL_RETRY
             time.sleep(FAIL_RETRY)

@@ -56,7 +56,7 @@ class XmppConnection(object):
             if data is None or len(data) == 0:
                 # socket closed
                 raise Exception("xmpp socket closed")
-        except Exception:
+        except:
             self._connected = False
             raise
 
@@ -192,7 +192,7 @@ class XmppConnection(object):
                     LOGGER.warn("Error in xmpp connection")
                     raise Exception("xmpp connection errror")
 
-            except Exception:
+            except:
                 self.close()
                 raise
 
