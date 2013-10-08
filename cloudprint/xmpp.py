@@ -70,7 +70,7 @@ class XmppConnection(object):
         try:
             self._wrappedsock.sendall(msg)
             self._nextkeepalive = time.time() + self._keepalive_period
-        except Exception:
+        except:
             self._connected = False
             raise
 
