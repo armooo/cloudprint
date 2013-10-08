@@ -125,7 +125,7 @@ class XmppConnection(object):
             iq = self._msg('<iq type="set"><bind xmlns="urn:ietf:params:xml:ns:xmpp-bind"><resource>Armooo</resource></bind></iq>')
             bare_jid = iq[0][0].text.split('/')[0]
             self._msg('<iq type="set" to="%s"><subscribe xmlns="google:push"><item channel="cloudprint.google.com" from="cloudprint.google.com"/></subscribe></iq>' % bare_jid)
-        except Exception:
+        except:
             self.close()
             raise
 
