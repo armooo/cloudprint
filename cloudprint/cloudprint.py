@@ -374,7 +374,7 @@ def process_jobs(cups_connection, cpp, printers):
 
         except:
             global FAIL_RETRY
-            LOGGER.exception('ERROR: Could not Connect to Cloud Service. Will Try again in %d Seconds' % FAIL_RETRY)
+            LOGGER.error('ERROR: Could not Connect to Cloud Service. Will Try again in %d Seconds' % FAIL_RETRY)
             time.sleep(FAIL_RETRY)
 
 
