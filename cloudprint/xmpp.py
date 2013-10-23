@@ -94,7 +94,14 @@ class XmppConnection(object):
 
     def _check_for_notification(self):
         """Check for any notifications which have already been received"""
-        return self._handler.get_elem() is not None
+        elem = self._handler.get_elem()
+
+        if elem:
+            assert not elem.tag.endswith('failure') and not elem.tag.endswith('error')
+            return True
+        else:
+            return False
+
 
     def _send_keepalive(self):
         LOGGER.info("Sending XMPP keepalive")
