@@ -47,11 +47,13 @@ class XmppConnection(object):
         self._connected = False
         self._wrappedsock = None
         self._keepalive_period = keepalive_period
+        self._nextkeepalive = time.time() + self._keepalive_period
 
     def _read_socket(self):
         """read pending data from the socket, and send it to the XML parser.
         return False if the socket is closed, True if it is ok"""
         try:
+            self._nextkeepalive = time.time() + self._keepalive_period
             data = self._wrappedsock.recv(1024)
             if data is None or len(data) == 0:
                 # socket closed
@@ -61,15 +63,14 @@ class XmppConnection(object):
             raise
 
         LOGGER.debug('<<< %s' % data)
-        self._nextkeepalive = time.time() + self._keepalive_period
         self._xmlparser.feed(data)
 
     def _write_socket(self, msg):
         """write a message to the XMPP server"""
         LOGGER.debug('>>> %s' % msg)
         try:
-            self._wrappedsock.sendall(msg)
             self._nextkeepalive = time.time() + self._keepalive_period
+            self._wrappedsock.sendall(msg)
         except:
             self._connected = False
             raise
@@ -105,7 +106,7 @@ class XmppConnection(object):
         # first close any existing socket
         self.close()
 
-        LOGGER.info("Establishing connection to xmpp server %s:%i" % 
+        LOGGER.info("Establishing connection to xmpp server %s:%i" %
                     (host, port))
         self._xmppsock = socket.socket()
         self._wrappedsock = self._xmppsock
@@ -139,7 +140,7 @@ class XmppConnection(object):
             self._wrappedsock.close()
             self._wrappedsock = None
         self._connected = False
-        self._nextkeepalive = None
+        self._nextkeepalive = 0
 
 
     def is_connected(self):
@@ -175,7 +176,7 @@ class XmppConnection(object):
 
             if waittime < 0:
                 waittime = 0
-                    
+
             sock = self._xmppsock
             (r, w, e) = select.select([sock], [], [sock], waittime)
 
