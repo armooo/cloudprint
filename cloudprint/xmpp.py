@@ -165,31 +165,31 @@ class XmppConnection(object):
             timeoutend = now + timeout
 
         while True:
-            if self._check_for_notification():
-                return True
-
-            if timeoutend is not None and timeoutend - now <= 0:
-                # timeout
-                return False
-
-            waittime = self._nextkeepalive - now
-            LOGGER.debug("%f seconds until next keepalive" % waittime)
-
-            if timeoutend is not None:
-                remaining = timeoutend - now
-                if remaining < waittime:
-                    waittime = remaining
-                    LOGGER.debug("%f seconds until timeout" % waittime)
-
-            if waittime < 0:
-                waittime = 0
-
-            sock = self._xmppsock
-            (r, w, e) = select.select([sock], [], [sock], waittime)
-
-            now = time.time()
-
             try:
+                if self._check_for_notification():
+                    return True
+
+                if timeoutend is not None and timeoutend - now <= 0:
+                    # timeout
+                    return False
+
+                waittime = self._nextkeepalive - now
+                LOGGER.debug("%f seconds until next keepalive" % waittime)
+
+                if timeoutend is not None:
+                    remaining = timeoutend - now
+                    if remaining < waittime:
+                        waittime = remaining
+                        LOGGER.debug("%f seconds until timeout" % waittime)
+
+                if waittime < 0:
+                    waittime = 0
+
+                sock = self._xmppsock
+                (r, w, e) = select.select([sock], [], [sock], waittime)
+
+                now = time.time()
+
                 if self._nextkeepalive - now <= 0:
                     self._send_keepalive()
 
