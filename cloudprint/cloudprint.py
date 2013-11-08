@@ -143,6 +143,7 @@ class CloudPrintProxy(object):
                 def f(*arg, **karg):
                     r = attr(*arg, **karg)
                     if 'update-client-auth' in r.headers:
+                        LOGGER.info("Updating authentication token")
                         self.set_auth(r.headers['update-client-auth'])
                     return r
                 return f
