@@ -38,7 +38,13 @@ class XmppXmlHandler(object):
         """If a top-level XML element has been completed since the last call to
         get_elem, return it; else return None."""
         try:
-            return self._results.popleft()
+            elem = self._results.popleft()
+
+            if elem.tag.endswith('failure') or elem.tag.endswith('error'):
+                raise Exception("XMPP Error received - %s" % elem.tag)
+
+            return elem
+
         except IndexError:
             return None
 
@@ -85,7 +91,6 @@ class XmppConnection(object):
             elem = self._handler.get_elem()
 
             if elem is not None:
-                assert not elem.tag.endswith('failure') and not elem.tag.endswith('error')
                 return elem
 
             # need more data; block until it becomes available
@@ -94,14 +99,7 @@ class XmppConnection(object):
 
     def _check_for_notification(self):
         """Check for any notifications which have already been received"""
-        elem = self._handler.get_elem()
-
-        if elem:
-            assert not elem.tag.endswith('failure') and not elem.tag.endswith('error')
-            return True
-        else:
-            return False
-
+        return(self._handler.get_elem() is not None)
 
     def _send_keepalive(self):
         LOGGER.info("Sending XMPP keepalive")
