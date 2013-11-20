@@ -16,8 +16,6 @@ Usage
   -l              : logout of the current google account
   -p pid_file     : path to write the pid to (default cloudprint.pid)
   -a account_file : path to google account ident data (optional)
-                    account_file format:  <Google username>
-                                          <Google password>
   -c              : establish and store login credentials, then exit
   -f              : 'fast poll', if notifications aren't working
   -i regexp       : include files matching regexp

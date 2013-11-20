@@ -402,8 +402,6 @@ def usage():
     print '-l\t\t: logout of the google account'
     print '-p pid_file\t: path to write the pid to (default cloudprint.pid)'
     print '-a account_file\t: path to google account ident data (default ~/.cloudprintauth)'
-    print '\t\t account_file format:\t <Google username>'
-    print '\t\t\t\t\t <Google password>'
     print '-c\t\t: establish and store login credentials, then exit'
     print '-f\t\t: use fast poll if notifications are not working'
     print '-i regexp\t: include local printers matching regexp'
@@ -477,15 +475,9 @@ def main():
         LOGGER.info('logged out')
         return
 
-    # Check if authentification is needed
+    # Check if password authentification is needed
     if not cpp.get_saved_auth():
-        if authfile and os.path.exists(authfile):
-            account_file = open(authfile)
-            cpp.username = account_file.next().rstrip()
-            cpp.password = account_file.next().rstrip()
-            account_file.close()
-
-        else:
+        if authfile is None  or not os.path.exists(authfile):
           cpp.username = raw_input('Google username: ')
           cpp.password = getpass.getpass()
 
@@ -519,7 +511,7 @@ def main():
             print 'daemon module required for -d'
             print '\tyum install python-daemon, or apt-get install python-daemon, or pip install python-daemon'
             sys.exit(1)
-        
+
         app = App(cups_connection=cups_connection,
                   cpp=cpp, printers=printers,
                   pidfile_path=os.path.abspath(pidfile))
