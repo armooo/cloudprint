@@ -56,6 +56,7 @@ class CloudPrintProxy(object):
         self.username = None
         self.password = None
         self.sleeptime = 0
+        self.storepw = False
         self.include = []
         self.exclude = []
 
@@ -110,7 +111,9 @@ class CloudPrintProxy(object):
     def get_saved_auth(self):
         if os.path.exists(self.auth_path):
             auth_file = open(self.auth_path)
-            self.auth = auth_file.read()
+            self.auth = auth_file.readline().rstrip()
+            self.username = auth_file.readline().rstrip()
+            self.password = auth_file.readline().rstrip()
             auth_file.close()
             return self.auth
 
@@ -126,6 +129,8 @@ class CloudPrintProxy(object):
                 auth_file.close()
             auth_file = open(self.auth_path, 'w')
             auth_file.write(self.auth)
+            if self.storepw:
+                auth_file.write("\n%s\n%s\n" % (self.username, self.password))
             auth_file.close()
 
     def get_rest(self):
@@ -397,13 +402,14 @@ def process_jobs(cups_connection, cpp, printers):
 
 
 def usage():
-    print sys.argv[0] + ' [-d][-l][-h][-c][-f][-v] [-p pid_file] [-a account_file]'
+    print sys.argv[0] + ' [-d][-l][-h][-c][-f][-u][-v] [-p pid_file] [-a account_file]'
     print '-d\t\t: enable daemon mode (requires the daemon module)'
     print '-l\t\t: logout of the google account'
     print '-p pid_file\t: path to write the pid to (default cloudprint.pid)'
     print '-a account_file\t: path to google account ident data (default ~/.cloudprintauth)'
     print '-c\t\t: establish and store login credentials, then exit'
     print '-f\t\t: use fast poll if notifications are not working'
+    print '-u\t\t: store username/password in addition to login token'
     print '-i regexp\t: include local printers matching regexp'
     print '-x regexp\t: exclude local printers matching regexp'
     print '\t\t regexp: a Python regexp, which is matched against the start of the printer name'
@@ -411,7 +417,7 @@ def usage():
     print '-h\t\t: display this help'
 
 def main():
-    opts, args = getopt.getopt(sys.argv[1:], 'dlhp:a:cvfi:x:')
+    opts, args = getopt.getopt(sys.argv[1:], 'dlhp:a:cuvfi:x:')
     daemon = False
     logout = False
     pidfile = None
@@ -420,6 +426,7 @@ def main():
     verbose = False
     saslauthfile = None
     fastpoll = False
+    storepw = False
     include = []
     exclude = []
     for o, a in opts:
@@ -438,6 +445,8 @@ def main():
             verbose = True
         elif o == '-f':
             fastpoll = True
+        elif o == '-u':
+            storepw = True
         elif o == '-i':
             include.append(a)
         elif o == '-x':
@@ -470,6 +479,9 @@ def main():
     if fastpoll:
         cpp.sleeptime = FAST_POLL_PERIOD
 
+    if storepw:
+        cpp.storepw = True
+
     if logout:
         cpp.del_saved_auth()
         LOGGER.info('logged out')
@@ -477,7 +489,7 @@ def main():
 
     # Check if password authentification is needed
     if not cpp.get_saved_auth():
-        if authfile is None  or not os.path.exists(authfile):
+        if authfile is None or not os.path.exists(authfile):
           cpp.username = raw_input('Google username: ')
           cpp.password = getpass.getpass()
 
