@@ -400,6 +400,15 @@ def process_jobs(cups_connection, cpp, printers):
             LOGGER.error('ERROR: Could not Connect to Cloud Service. Will Try again in %d Seconds' % FAIL_RETRY)
             time.sleep(FAIL_RETRY)
 
+        if cpp.username and not xmpp_conn.is_connected():
+            LOGGER.debug('Refreshing authentication')
+            cpp.set_auth('')
+            try:
+                cpp.get_auth()
+                xmpp_auth = file(cpp.xmpp_auth_path).read()
+            except:
+                LOGGER.debug('Error refreshing authentication')
+
 
 def usage():
     print sys.argv[0] + ' [-d][-l][-h][-c][-f][-u][-v] [-p pid_file] [-a account_file]'
