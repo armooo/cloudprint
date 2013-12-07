@@ -47,7 +47,6 @@ class CloudPrintProxy(object):
     def __init__(self, verbose=True):
         self.verbose = verbose
         self.auth = None
-        self.printer_id = None
         self.cups= cups.Connection()
         self.proxy =  platform.node() + '-Armooo-PrintProxy'
         self.auth_path = os.path.expanduser('~/.cloudprintauth')
