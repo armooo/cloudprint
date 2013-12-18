@@ -11,7 +11,7 @@ Usage
 
 ::
 
-  cloudprint [-d] [-p pid_file] [-a account_file] [-h]
+  cloudprint [<option> ...]
   -d              : enable daemon mode (requires the daemon module)
   -l              : logout of the current google account
   -p pid_file     : path to write the pid to (default cloudprint.pid)
@@ -19,6 +19,7 @@ Usage
                     account_file format:  <Google username>
                                           <Google password>
   -c              : establish and store login credentials, then exit
+  -f              : 'fast poll', if notifications aren't working
   -h              : display this help
 
 Google accounts with 2 step verification enabled need to use an
