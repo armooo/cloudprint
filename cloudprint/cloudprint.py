@@ -40,7 +40,6 @@ KEEPALIVE=600.0
 
 LOGGER = logging.getLogger('cloudprint')
 LOGGER.setLevel(logging.INFO)
-#LOGGER.setLevel(logging.DEBUG)
 
 class CloudPrintProxy(object):
 
@@ -378,7 +377,7 @@ def process_jobs(cups_connection, cpp, printers):
 
 
 def usage():
-    print sys.argv[0] + ' [-d][-l][-h][-c] [-p pid_file] [-a account_file]'
+    print sys.argv[0] + ' [-d][-l][-h][-c][-v] [-p pid_file] [-a account_file]'
     print '-d\t\t: enable daemon mode (requires the daemon module)'
     print '-l\t\t: logout of the google account'
     print '-p pid_file\t: path to write the pid to (default cloudprint.pid)'
@@ -386,15 +385,17 @@ def usage():
     print '\t\t account_file format:\t <Google username>'
     print '\t\t\t\t\t <Google password>'
     print '-c\t\t: establish and store login credentials, then exit'
+    print '-v\t\t: verbose logging'
     print '-h\t\t: display this help'
 
 def main():
-    opts, args = getopt.getopt(sys.argv[1:], 'dlhp:a:c')
+    opts, args = getopt.getopt(sys.argv[1:], 'dlhp:a:cv')
     daemon = False
     logout = False
     pidfile = None
     authfile = None
     authonly = False
+    verbose = False
     saslauthfile = None
     for o, a in opts:
         if o == '-d':
@@ -408,6 +409,8 @@ def main():
             saslauthfile = authfile+'.sasl'
         elif o == '-c':
             authonly = True
+        elif o == '-v':
+            verbose = True
         elif o =='-h':
             usage()
             sys.exit()
@@ -422,6 +425,9 @@ def main():
         handler = logging.StreamHandler(sys.stdout)
     LOGGER.addHandler(handler)
 
+    if verbose:
+        LOGGER.info('Setting DEBUG-level logging')
+        LOGGER.setLevel(logging.DEBUG)
 
     cups_connection = cups.Connection()
     cpp = CloudPrintProxy()
