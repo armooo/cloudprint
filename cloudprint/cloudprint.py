@@ -16,11 +16,27 @@ import getopt
 import logging
 import logging.handlers
 
+import xmpp
+
+XMPP_SERVER_HOST = 'talk.google.com'
+XMPP_USE_SSL = True
+XMPP_SERVER_PORT = 5223
 
 SOURCE = 'Armooo-PrintProxy-1'
 PRINT_CLOUD_SERVICE_ID = 'cloudprint'
 CLIENT_LOGIN_URL = '/accounts/ClientLogin'
 PRINT_CLOUD_URL = '/cloudprint/'
+
+# period in seconds with which we should poll for new jobs via the HTTP api,
+# when xmpp is connecting properly.
+# 'None' to poll only on startup and when we get XMPP notifications.
+POLL_PERIOD=3600.0
+
+# wait period to retry when xmpp fails
+FAIL_RETRY=60
+
+# how often, in seconds, to send a keepalive character over xmpp
+KEEPALIVE=600.0
 
 LOGGER = logging.getLogger('cloudprint')
 LOGGER.setLevel(logging.INFO)
@@ -30,7 +46,6 @@ class CloudPrintProxy(object):
     def __init__(self, verbose=True):
         self.verbose = verbose
         self.auth = None
-        self.printer_id = None
         self.cups= cups.Connection()
         self.proxy =  platform.node() + '-Armooo-PrintProxy'
         self.auth_path = os.path.expanduser('~/.cloudprintauth')
@@ -247,6 +262,7 @@ class PrinterProxy(object):
         self.name = name
 
     def get_jobs(self):
+        LOGGER.info('Polling for jobs on ' + self.name)
         return self.cpp.get_jobs(self.id)
 
     def update(self, description, ppd):
@@ -338,43 +354,30 @@ def process_job(cups_connection, cpp, printer, job):
         LOGGER.error('ERROR ' + job['title'].encode('unicode-escape'))
 
 def process_jobs(cups_connection, cpp, printers):
+    xmpp_auth = file(cpp.xmpp_auth_path).read()
+    xmpp_conn = xmpp.XmppConnection(keepalive_period=KEEPALIVE)
+
     while True:
         try:
             for printer in printers:
                 for job in printer.get_jobs():
                     process_job(cups_connection, cpp, printer, job)
-            wait_for_new_job(file(cpp.xmpp_auth_path).read())
-        except Exception, e:
-            LOGGER.exception('ERROR: Could not Connect to Cloud Service. Will Try again in 60 Seconds')
-            time.sleep(60)
+            sleeptime = POLL_PERIOD
 
-def wait_for_new_job(sasl_token):
-    # https://developers.google.com/cloud-print/docs/rawxmpp
-    import ssl, socket
-    from xml.etree.ElementTree import iterparse, tostring
-    xmpp = ssl.wrap_socket(socket.socket())
-    xmpp.connect(('talk.google.com', 5223))
-    parser = iterparse(xmpp, ('start', 'end'))
-    def msg(msg=' '):
-        xmpp.write(msg)
-        stack = 0
-        for event, el in parser:
-            if event == 'start' and el.tag.endswith('stream'):
-                continue
-            stack += 1 if event == 'start' else -1
-            if stack == 0:
-                assert not el.tag.endswith('failure') and not el.tag.endswith('error') and not el.get('type') == 'error', tostring(el)
-                return el
-    msg('<stream to="gmail.com" version="1.0" xmlns="http://etherx.jabber.org/streams">')
-    msg('<auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl" mechanism="X-GOOGLE-TOKEN">%s</auth>' % sasl_token)
-    msg('<s:stream to="gmail.com" version="1.0" xmlns:s="http://etherx.jabber.org/streams" xmlns="jabber:client">')
-    iq = msg('<iq type="set"><bind xmlns="urn:ietf:params:xml:ns:xmpp-bind"><resource>Armooo</resource></bind></iq>')
-    bare_jid = iq[0][0].text.split('/')[0]
-    msg('<iq type="set" to="%s"><subscribe xmlns="google:push"><item channel="cloudprint.google.com" from="cloudprint.google.com"/></subscribe></iq>' % bare_jid)
-    return msg()
+            if not xmpp_conn.is_connected():
+                xmpp_conn.connect(XMPP_SERVER_HOST,XMPP_SERVER_PORT,
+                                  XMPP_USE_SSL,xmpp_auth)
+
+            xmpp_conn.await_notification(sleeptime)
+
+        except:
+            global FAIL_RETRY
+            LOGGER.error('ERROR: Could not Connect to Cloud Service. Will Try again in %d Seconds' % FAIL_RETRY)
+            time.sleep(FAIL_RETRY)
+
 
 def usage():
-    print sys.argv[0] + ' [-d][-l][-h] [-p pid_file] [-a account_file]'
+    print sys.argv[0] + ' [-d][-l][-h][-c][-v] [-p pid_file] [-a account_file]'
     print '-d\t\t: enable daemon mode (requires the daemon module)'
     print '-l\t\t: logout of the google account'
     print '-p pid_file\t: path to write the pid to (default cloudprint.pid)'
@@ -382,15 +385,17 @@ def usage():
     print '\t\t account_file format:\t <Google username>'
     print '\t\t\t\t\t <Google password>'
     print '-c\t\t: establish and store login credentials, then exit'
+    print '-v\t\t: verbose logging'
     print '-h\t\t: display this help'
 
 def main():
-    opts, args = getopt.getopt(sys.argv[1:], 'dlhp:a:c')
+    opts, args = getopt.getopt(sys.argv[1:], 'dlhp:a:cv')
     daemon = False
     logout = False
     pidfile = None
     authfile = None
     authonly = False
+    verbose = False
     saslauthfile = None
     for o, a in opts:
         if o == '-d':
@@ -404,6 +409,8 @@ def main():
             saslauthfile = authfile+'.sasl'
         elif o == '-c':
             authonly = True
+        elif o == '-v':
+            verbose = True
         elif o =='-h':
             usage()
             sys.exit()
@@ -418,6 +425,9 @@ def main():
         handler = logging.StreamHandler(sys.stdout)
     LOGGER.addHandler(handler)
 
+    if verbose:
+        LOGGER.info('Setting DEBUG-level logging')
+        LOGGER.setLevel(logging.DEBUG)
 
     cups_connection = cups.Connection()
     cpp = CloudPrintProxy()
