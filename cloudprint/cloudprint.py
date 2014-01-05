@@ -30,7 +30,9 @@ PRINT_CLOUD_URL = '/cloudprint/'
 # period in seconds with which we should poll for new jobs via the HTTP api,
 # when xmpp is connecting properly.
 # 'None' to poll only on startup and when we get XMPP notifications.
+# 'Fast Poll' is used as a workaround when notifications are not working.
 POLL_PERIOD=3600.0
+FAST_POLL_PERIOD=30.0
 
 # wait period to retry when xmpp fails
 FAIL_RETRY=60
@@ -52,6 +54,7 @@ class CloudPrintProxy(object):
         self.xmpp_auth_path = os.path.expanduser('~/.cloudprintauth.sasl')
         self.username = None
         self.password = None
+        self.sleeptime = 0
 
     def get_auth(self):
         if self.auth:
@@ -362,13 +365,12 @@ def process_jobs(cups_connection, cpp, printers):
             for printer in printers:
                 for job in printer.get_jobs():
                     process_job(cups_connection, cpp, printer, job)
-            sleeptime = POLL_PERIOD
 
             if not xmpp_conn.is_connected():
                 xmpp_conn.connect(XMPP_SERVER_HOST,XMPP_SERVER_PORT,
                                   XMPP_USE_SSL,xmpp_auth)
 
-            xmpp_conn.await_notification(sleeptime)
+            xmpp_conn.await_notification(cpp.sleeptime)
 
         except:
             global FAIL_RETRY
@@ -377,7 +379,7 @@ def process_jobs(cups_connection, cpp, printers):
 
 
 def usage():
-    print sys.argv[0] + ' [-d][-l][-h][-c][-v] [-p pid_file] [-a account_file]'
+    print sys.argv[0] + ' [-d][-l][-h][-c][-f][-v] [-p pid_file] [-a account_file]'
     print '-d\t\t: enable daemon mode (requires the daemon module)'
     print '-l\t\t: logout of the google account'
     print '-p pid_file\t: path to write the pid to (default cloudprint.pid)'
@@ -385,11 +387,12 @@ def usage():
     print '\t\t account_file format:\t <Google username>'
     print '\t\t\t\t\t <Google password>'
     print '-c\t\t: establish and store login credentials, then exit'
+    print '-f\t\t: use fast poll if notifications are not working'
     print '-v\t\t: verbose logging'
     print '-h\t\t: display this help'
 
 def main():
-    opts, args = getopt.getopt(sys.argv[1:], 'dlhp:a:cv')
+    opts, args = getopt.getopt(sys.argv[1:], 'dlhp:a:cvf')
     daemon = False
     logout = False
     pidfile = None
@@ -397,6 +400,7 @@ def main():
     authonly = False
     verbose = False
     saslauthfile = None
+    fastpoll = False
     for o, a in opts:
         if o == '-d':
             daemon = True
@@ -411,6 +415,8 @@ def main():
             authonly = True
         elif o == '-v':
             verbose = True
+        elif o == '-f':
+            fastpoll = True
         elif o =='-h':
             usage()
             sys.exit()
@@ -434,6 +440,10 @@ def main():
     if authfile:
         cpp.auth_path = authfile
         cpp.xmpp_auth_path = saslauthfile
+
+    cpp.sleeptime = POLL_PERIOD
+    if fastpoll:
+        cpp.sleeptime = FAST_POLL_PERIOD
 
     if logout:
         cpp.del_saved_auth()
