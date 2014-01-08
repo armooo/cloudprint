@@ -142,12 +142,16 @@ class XmppConnection(object):
 
     def close(self):
         """Close the connection to the XMPP server"""
-        if self._wrappedsock is not None:
+        try:
             self._wrappedsock.shutdown(socket.SHUT_RDWR)
             self._wrappedsock.close()
+        except:
+            # close() is best effort. Don't respond to failures
+            LOGGER.debug("Error encountered closing XMPP socket")
+        finally:
+            self._connected = False
+            self._nextkeepalive = 0
             self._wrappedsock = None
-        self._connected = False
-        self._nextkeepalive = 0
 
 
     def is_connected(self):
