@@ -402,13 +402,13 @@ def usage():
     print '-c\t\t: establish and store login credentials, then exit'
     print '-f\t\t: use fast poll if notifications are not working'
     print '-i regexp\t: include local printers matching regexp'
-    print '-e regexp\t: exclude local printers matching regexp'
+    print '-x regexp\t: exclude local printers matching regexp'
     print '\t\t regexp: a Python regexp, which is matched against the start of the printer name'
     print '-v\t\t: verbose logging'
     print '-h\t\t: display this help'
 
 def main():
-    opts, args = getopt.getopt(sys.argv[1:], 'dlhp:a:cvfi:e:')
+    opts, args = getopt.getopt(sys.argv[1:], 'dlhp:a:cvfi:x:')
     daemon = False
     logout = False
     pidfile = None
@@ -437,7 +437,7 @@ def main():
             fastpoll = True
         elif o == '-i':
             include.append(a)
-        elif o == '-e':
+        elif o == '-x':
             exclude.append(a)
         elif o =='-h':
             usage()

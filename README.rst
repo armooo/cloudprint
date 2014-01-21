@@ -21,7 +21,7 @@ Usage
   -c              : establish and store login credentials, then exit
   -f              : 'fast poll', if notifications aren't working
   -i regexp       : include files matching regexp
-  -e regexp       : exclude filees matching regexp
+  -x regexp       : exclude filees matching regexp
                     regexp: a Python regexp, which is matched against the
                             start of the printer name
   -h              : display this help
@@ -50,7 +50,7 @@ Include only the printers "`lp`" and "`2up`":
 Exclude all printers whose names start with "`GCP-`":
 ::
 
-  cloudprint -e GCP-
+  cloudprint -x GCP-
 
 By default, all printers are included.  For the include and exclude options,
 the argument is a regular expression which is matched against the start of the
