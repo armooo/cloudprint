@@ -39,6 +39,29 @@ Example
   Password:
   Added Printer Brother-HL-2170W
 
+Examples - Include/Exclude
+---------------------------------------------------
+
+Include only the printers "`lp`" and "`2up`":
+::
+
+  cloudprint -i lp -i 2up
+
+Exclude all printers whose names start with "`GCP-`":
+::
+
+  cloudprint -e GCP-
+
+By default, all printers are included.  For the include and exclude options,
+the argument is a regular expression which is matched against the start of the
+printer name.
+
+For example, to include all printers whose names begin "`lp`":
+::
+
+  cloudprint -i lp # includes both lp and lp2up
+
+
 Install
 ---------------------------------------------------
 
