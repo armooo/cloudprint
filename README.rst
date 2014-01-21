@@ -20,6 +20,10 @@ Usage
                                           <Google password>
   -c              : establish and store login credentials, then exit
   -f              : 'fast poll', if notifications aren't working
+  -i regexp       : include files matching regexp
+  -e regexp       : exclude filees matching regexp
+                    regexp: a Python regexp, which is matched against the
+                            start of the printer name
   -h              : display this help
 
 Google accounts with 2 step verification enabled need to use an

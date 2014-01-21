@@ -292,7 +292,7 @@ class App(object):
         process_jobs(self.cups_connection, self.cpp, self.printers)
 
 
-# True if printer name matches *any* of the regular expression in regexps
+#True if printer name matches *any* of the regular expressions in regexps
 def match_any(printer, regexps):
     for e in regexps:
         if re.match(e, printer, re.UNICODE):
@@ -304,8 +304,8 @@ def sync_printers(cups_connection, cpp):
     remote_printers = dict([(p.name, p) for p in cpp.get_printers()])
     remote_printer_names = set(remote_printers)
 
-    if 0 < len(cpp.include):
-       local_printer_names = set([ printer for printer in local_printer_names if match_any(printer,cpp.include) ])
+    #Include/exclude local printers
+    local_printer_names = set([ printer for printer in local_printer_names if 0 == len(cpp.include) or match_any(printer,cpp.include) ])
     local_printer_names = set([ printer for printer in local_printer_names if not match_any(printer,cpp.exclude) ])
 
     #New printers
@@ -402,6 +402,9 @@ def usage():
     print '\t\t\t\t\t <Google password>'
     print '-c\t\t: establish and store login credentials, then exit'
     print '-f\t\t: use fast poll if notifications are not working'
+    print '-i regexp\t: include files matching regexp'
+    print '-e regexp\t: exclude files matching regexp'
+    print '\t\t regexp: a Python regexp, which is matched against the start of the printer name'
     print '-v\t\t: verbose logging'
     print '-h\t\t: display this help'
 
