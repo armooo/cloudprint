@@ -13,6 +13,7 @@ import getpass
 import stat
 import sys
 import getopt
+import re
 import logging
 import logging.handlers
 
@@ -55,6 +56,8 @@ class CloudPrintProxy(object):
         self.username = None
         self.password = None
         self.sleeptime = 0
+        self.include = []
+        self.exclude = []
 
     def get_auth(self):
         if self.auth:
@@ -289,10 +292,21 @@ class App(object):
         process_jobs(self.cups_connection, self.cpp, self.printers)
 
 
+# True if printer name matches *any* of the regular expression in regexps
+def match_any(printer, regexps):
+    for e in regexps:
+        if re.match(e, printer, re.UNICODE):
+            return True
+    return False
+
 def sync_printers(cups_connection, cpp):
     local_printer_names = set(cups_connection.getPrinters().keys())
     remote_printers = dict([(p.name, p) for p in cpp.get_printers()])
     remote_printer_names = set(remote_printers)
+
+    if 0 < len(cpp.include):
+       local_printer_names = set([ printer for printer in local_printer_names if match_any(printer,cpp.include) ])
+    local_printer_names = set([ printer for printer in local_printer_names if not match_any(printer,cpp.exclude) ])
 
     #New printers
     for printer_name in local_printer_names - remote_printer_names:
@@ -392,7 +406,7 @@ def usage():
     print '-h\t\t: display this help'
 
 def main():
-    opts, args = getopt.getopt(sys.argv[1:], 'dlhp:a:cvf')
+    opts, args = getopt.getopt(sys.argv[1:], 'dlhp:a:cvfi:e:')
     daemon = False
     logout = False
     pidfile = None
@@ -401,6 +415,8 @@ def main():
     verbose = False
     saslauthfile = None
     fastpoll = False
+    include = []
+    exclude = []
     for o, a in opts:
         if o == '-d':
             daemon = True
@@ -417,6 +433,10 @@ def main():
             verbose = True
         elif o == '-f':
             fastpoll = True
+        elif o == '-i':
+            include.append(a)
+        elif o == '-e':
+            exclude.append(a)
         elif o =='-h':
             usage()
             sys.exit()
@@ -461,6 +481,9 @@ def main():
         else:
           cpp.username = raw_input('Google username: ')
           cpp.password = getpass.getpass()
+
+    cpp.include = include
+    cpp.exclude = exclude
 
     #try to login
     while True:
