@@ -307,9 +307,6 @@ def sync_printers(cups_connection, cpp):
     local_printer_names = set([ prn for prn in local_printer_names if     match_re(prn,cpp.include,True) ])
     local_printer_names = set([ prn for prn in local_printer_names if not match_re(prn,cpp.exclude     ) ])
 
-    print local_printer_names
-    sys.exit(0)
-
     #New printers
     for printer_name in local_printer_names - remote_printer_names:
         try:
