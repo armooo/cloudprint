@@ -13,6 +13,7 @@ import getpass
 import stat
 import sys
 import getopt
+import re
 import logging
 import logging.handlers
 
@@ -55,6 +56,8 @@ class CloudPrintProxy(object):
         self.username = None
         self.password = None
         self.sleeptime = 0
+        self.include = []
+        self.exclude = []
 
     def get_auth(self):
         if self.auth:
@@ -288,11 +291,25 @@ class App(object):
     def run(self):
         process_jobs(self.cups_connection, self.cpp, self.printers)
 
+#True if printer name matches *any* of the regular expressions in regexps
+def match_re(prn, regexps, empty=False):
+    if len(regexps):
+        try:
+           return re.match(regexps[0], prn, re.UNICODE) or match_re(prn, regexps[1:])
+        except:
+           sys.stderr.write('cloudprint: invalid regular expression: ' + regexps[0] + '\n')
+           sys.exit(1)
+    else:
+        return empty
 
 def sync_printers(cups_connection, cpp):
     local_printer_names = set(cups_connection.getPrinters().keys())
     remote_printers = dict([(p.name, p) for p in cpp.get_printers()])
     remote_printer_names = set(remote_printers)
+
+    #Include/exclude local printers
+    local_printer_names = set([ prn for prn in local_printer_names if match_re(prn,cpp.include,True) ])
+    local_printer_names = set([ prn for prn in local_printer_names if not match_re(prn,cpp.exclude ) ])
 
     #New printers
     for printer_name in local_printer_names - remote_printer_names:
@@ -388,11 +405,14 @@ def usage():
     print '\t\t\t\t\t <Google password>'
     print '-c\t\t: establish and store login credentials, then exit'
     print '-f\t\t: use fast poll if notifications are not working'
+    print '-i regexp\t: include local printers matching regexp'
+    print '-x regexp\t: exclude local printers matching regexp'
+    print '\t\t regexp: a Python regexp, which is matched against the start of the printer name'
     print '-v\t\t: verbose logging'
     print '-h\t\t: display this help'
 
 def main():
-    opts, args = getopt.getopt(sys.argv[1:], 'dlhp:a:cvf')
+    opts, args = getopt.getopt(sys.argv[1:], 'dlhp:a:cvfi:x:')
     daemon = False
     logout = False
     pidfile = None
@@ -401,6 +421,8 @@ def main():
     verbose = False
     saslauthfile = None
     fastpoll = False
+    include = []
+    exclude = []
     for o, a in opts:
         if o == '-d':
             daemon = True
@@ -417,6 +439,10 @@ def main():
             verbose = True
         elif o == '-f':
             fastpoll = True
+        elif o == '-i':
+            include.append(a)
+        elif o == '-x':
+            exclude.append(a)
         elif o =='-h':
             usage()
             sys.exit()
@@ -461,6 +487,9 @@ def main():
         else:
           cpp.username = raw_input('Google username: ')
           cpp.password = getpass.getpass()
+
+    cpp.include = include
+    cpp.exclude = exclude
 
     #try to login
     while True:

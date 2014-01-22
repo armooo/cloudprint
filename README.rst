@@ -20,6 +20,10 @@ Usage
                                           <Google password>
   -c              : establish and store login credentials, then exit
   -f              : 'fast poll', if notifications aren't working
+  -i regexp       : include files matching regexp
+  -x regexp       : exclude filees matching regexp
+                    regexp: a Python regexp, which is matched against the
+                            start of the printer name
   -h              : display this help
 
 Google accounts with 2 step verification enabled need to use an
@@ -34,6 +38,29 @@ Example
   Google username: username@gmail.com
   Password:
   Added Printer Brother-HL-2170W
+
+Examples - Include/Exclude
+---------------------------------------------------
+
+Include only the printers "`lp`" and "`2up`":
+::
+
+  cloudprint -i lp -i 2up
+
+Exclude all printers whose names start with "`GCP-`":
+::
+
+  cloudprint -x GCP-
+
+By default, all printers are included.  For the include and exclude options,
+the argument is a regular expression which is matched against the start of the
+printer name.
+
+For example, to include all printers whose names begin "`lp`":
+::
+
+  cloudprint -i lp # includes both lp and lp2up
+
 
 Install
 ---------------------------------------------------
