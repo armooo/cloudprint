@@ -294,7 +294,11 @@ class App(object):
 #True if printer name matches *any* of the regular expressions in regexps
 def match_re(prn, regexps, empty=False):
     if len(regexps):
-        return re.match(regexps[0], prn, re.UNICODE) or match_re(prn, regexps[1:])
+        try:
+           return re.match(regexps[0], prn, re.UNICODE) or match_re(prn, regexps[1:])
+        except:
+           sys.stderr.write('cloudprint: invalid regular expression: ' + regexps[0] + '\n')
+           sys.exit(1)
     else:
         return empty
 
