@@ -16,10 +16,10 @@ Usage
   -l              : logout of the current google account
   -p pid_file     : path to write the pid to (default cloudprint.pid)
   -a account_file : path to google account ident data (optional)
-                    account_file format:  <Google username>
-                                          <Google password>
   -c              : establish and store login credentials, then exit
   -f              : 'fast poll', if notifications aren't working
+  -u              : store username/password in addition to login token
+                    to avoid authentication expiration
   -i regexp       : include files matching regexp
   -x regexp       : exclude filees matching regexp
                     regexp: a Python regexp, which is matched against the
