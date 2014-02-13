@@ -433,44 +433,33 @@ def main():
     parser.add_argument('-v', dest='verbose', action='store_true',
             help='verbose logging')
     args = parser.parse_args()
-    daemon = args.daemon
-    logout = args.logout
-    pidfile = args.pidfile
-    authfile = args.authfile
-    authonly = args.authonly
-    verbose = args.verbose
-    saslauthfile = authfile+'.sasl'
-    fastpoll = args.fastpoll
-    storepw = args.storepw
-    include = args.include
-    exclude = args.exclude
 
     # if daemon, log to syslog, otherwise log to stdout
-    if daemon:
+    if args.daemon:
         handler = logging.handlers.SysLogHandler(address='/dev/log')
         handler.setFormatter(logging.Formatter(fmt='cloudprint.py: %(message)s'))
     else:
         handler = logging.StreamHandler(sys.stdout)
     LOGGER.addHandler(handler)
 
-    if verbose:
+    if args.verbose:
         LOGGER.info('Setting DEBUG-level logging')
         LOGGER.setLevel(logging.DEBUG)
 
     cups_connection = cups.Connection()
     cpp = CloudPrintProxy()
-    if authfile:
-        cpp.auth_path = authfile
-        cpp.xmpp_auth_path = saslauthfile
+    if args.authfile:
+        cpp.auth_path = args.authfile
+        cpp.xmpp_auth_path = args.authfile+'.sasl'
 
     cpp.sleeptime = POLL_PERIOD
-    if fastpoll:
+    if args.fastpoll:
         cpp.sleeptime = FAST_POLL_PERIOD
 
-    if storepw:
+    if args.storepw:
         cpp.storepw = True
 
-    if logout:
+    if args.logout:
         cpp.del_saved_auth()
         LOGGER.info('logged out')
         return
@@ -481,8 +470,8 @@ def main():
           cpp.username = raw_input('Google username: ')
           cpp.password = getpass.getpass()
 
-    cpp.include = include
-    cpp.exclude = exclude
+    cpp.include = args.include
+    cpp.exclude = args.exclude
 
     #try to login
     while True:
@@ -499,12 +488,12 @@ def main():
             #reset the stored auth
             cpp.set_auth('')
 
-    if authonly:
+    if args.authonly:
         sys.exit(0)
 
     printers = cpp.get_printers()
 
-    if daemon:
+    if args.daemon:
         try:
             from daemon import runner
         except ImportError:
@@ -514,7 +503,7 @@ def main():
 
         app = App(cups_connection=cups_connection,
                   cpp=cpp, printers=printers,
-                  pidfile_path=os.path.abspath(pidfile))
+                  pidfile_path=os.path.abspath(args.pidfile))
         sys.argv=[sys.argv[0], 'start']
         daemon_runner = runner.DaemonRunner(app)
         daemon_runner.do_action()
