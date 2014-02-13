@@ -12,7 +12,7 @@ import json
 import getpass
 import stat
 import sys
-import getopt
+import argparse
 import re
 import logging
 import logging.handlers
@@ -410,61 +410,40 @@ def process_jobs(cups_connection, cpp, printers):
                 LOGGER.debug('Error refreshing authentication')
 
 
-def usage():
-    print sys.argv[0] + ' [-d][-l][-h][-c][-f][-u][-v] [-p pid_file] [-a account_file]'
-    print '-d\t\t: enable daemon mode (requires the daemon module)'
-    print '-l\t\t: logout of the google account'
-    print '-p pid_file\t: path to write the pid to (default cloudprint.pid)'
-    print '-a account_file\t: path to google account ident data (default ~/.cloudprintauth)'
-    print '-c\t\t: establish and store login credentials, then exit'
-    print '-f\t\t: use fast poll if notifications are not working'
-    print '-u\t\t: store username/password in addition to login token'
-    print '-i regexp\t: include local printers matching regexp'
-    print '-x regexp\t: exclude local printers matching regexp'
-    print '\t\t regexp: a Python regexp, which is matched against the start of the printer name'
-    print '-v\t\t: verbose logging'
-    print '-h\t\t: display this help'
-
 def main():
-    opts, args = getopt.getopt(sys.argv[1:], 'dlhp:a:cuvfi:x:')
-    daemon = False
-    logout = False
-    pidfile = None
-    authfile = None
-    authonly = False
-    verbose = False
-    saslauthfile = None
-    fastpoll = False
-    storepw = False
-    include = []
-    exclude = []
-    for o, a in opts:
-        if o == '-d':
-            daemon = True
-        elif o == '-l':
-            logout = True
-        elif o == '-p':
-            pidfile = a
-        elif o == '-a':
-            authfile = a
-            saslauthfile = authfile+'.sasl'
-        elif o == '-c':
-            authonly = True
-        elif o == '-v':
-            verbose = True
-        elif o == '-f':
-            fastpoll = True
-        elif o == '-u':
-            storepw = True
-        elif o == '-i':
-            include.append(a)
-        elif o == '-x':
-            exclude.append(a)
-        elif o =='-h':
-            usage()
-            sys.exit()
-    if not pidfile:
-        pidfile = 'cloudprint.pid'
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', dest='daemon', action='store_true',
+            help='enable daemon mode (requires the daemon module)')
+    parser.add_argument('-l', dest='logout', action='store_true',
+            help='logout of the google account')
+    parser.add_argument('-p', metavar='pid_file', dest='pidfile', default='cloudprint.pid',
+            help='path to write the pid to (default %(default)s)')
+    parser.add_argument('-a', metavar='account_file', dest='authfile', default=os.path.expanduser('~/.cloudprintauth'),
+            help='path to google account ident data (default %(default)s)')
+    parser.add_argument('-c', dest='authonly', action='store_true',
+            help='establish and store login credentials, then exit')
+    parser.add_argument('-f', dest='fastpoll', action='store_true',
+            help='use fast poll if notifications are not working')
+    parser.add_argument('-u', dest='storepw', action='store_true',
+            help='store username/password in addition to login token')
+    parser.add_argument('-i', metavar='regexp', dest='include', default=[], action='append',
+            help='include local printers matching %(metavar)s')
+    parser.add_argument('-x', metavar='regexp', dest='exclude', default=[], action='append',
+            help='exclude local printers matching %(metavar)s')
+    parser.add_argument('-v', dest='verbose', action='store_true',
+            help='verbose logging')
+    args = parser.parse_args()
+    daemon = args.daemon
+    logout = args.logout
+    pidfile = args.pidfile
+    authfile = args.authfile
+    authonly = args.authonly
+    verbose = args.verbose
+    saslauthfile = authfile+'.sasl'
+    fastpoll = args.fastpoll
+    storepw = args.storepw
+    include = args.include
+    exclude = args.exclude
 
     # if daemon, log to syslog, otherwise log to stdout
     if daemon:
