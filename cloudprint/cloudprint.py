@@ -466,7 +466,7 @@ def main():
 
     # Check if password authentification is needed
     if not cpp.get_saved_auth():
-        if authfile is None or not os.path.exists(authfile):
+        if args.authfile is None or not os.path.exists(args.authfile):
           cpp.username = raw_input('Google username: ')
           cpp.password = getpass.getpass()
 
