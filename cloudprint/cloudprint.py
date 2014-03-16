@@ -436,7 +436,7 @@ def main():
 
     # if daemon, log to syslog, otherwise log to stdout
     if args.daemon:
-        handler = logging.handlers.SysLogHandler(address='/dev/log')
+        handler = logging.handlers.SysLogHandler()
         handler.setFormatter(logging.Formatter(fmt='cloudprint.py: %(message)s'))
     else:
         handler = logging.StreamHandler(sys.stdout)
