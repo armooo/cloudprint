@@ -56,6 +56,10 @@ FAIL_RETRY = 60
 # how often, in seconds, to send a keepalive character over xmpp
 KEEPALIVE = 600.0
 
+# failed job retries
+RETRIES = 1
+num_retries = 0
+
 LOGGER = logging.getLogger('cloudprint')
 LOGGER.setLevel(logging.INFO)
 
@@ -373,6 +377,8 @@ def sync_printers(cups_connection, cpp):
 
 
 def process_job(cups_connection, cpp, printer, job):
+    global num_retries
+
     try:
         pdf = cpp.auth.session.get(job['fileUrl'], stream=True)
         tmp = tempfile.NamedTemporaryFile(delete=False)
@@ -390,10 +396,16 @@ def process_job(cups_connection, cpp, printer, job):
         LOGGER.info('SUCCESS ' + job['title'].encode('unicode-escape'))
 
         cpp.finish_job(job['id'])
+        num_retries = 0
 
     except Exception:
-        cpp.fail_job(job['id'])
-        LOGGER.exception('ERROR ' + job['title'].encode('unicode-escape'))
+        if num_retries >= RETRIES:
+            num_retries = 0
+            cpp.fail_job(job['id'])
+            LOGGER.error('ERROR ' + job['title'].encode('unicode-escape'))
+        else:
+            num_retries += 1
+            LOGGER.info('Job %s failed - Will retry' % job['title'].encode('unicode-escape'))
 
 
 def process_jobs(cups_connection, cpp):
