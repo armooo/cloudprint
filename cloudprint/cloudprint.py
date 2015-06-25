@@ -80,9 +80,8 @@ class CloudPrintAuth(object):
     @property
     def session(self):
         s = requests.session()
-        s.params['access_token'] = self._access_token
         s.headers['X-CloudPrint-Proxy'] = 'ArmoooIsAnOEM'
-        s.headers['Authorization'] = 'Authorization {0}'.format(self._access_token)
+        s.headers['Authorization'] = 'Bearer {0}'.format(self.access_token)
         return s
 
     @property
