@@ -193,9 +193,8 @@ class CloudPrintAuth(object):
 
 class CloudPrintProxy(object):
 
-    def __init__(self, auth, verbose=True):
+    def __init__(self, auth):
         self.auth = auth
-        self.verbose = verbose
         self.sleeptime = 0
         self.include = []
         self.exclude = []
@@ -218,8 +217,7 @@ class CloudPrintProxy(object):
                 'printerid': printer_id,
            },
         ).raise_for_status()
-        if self.verbose:
-            LOGGER.info('Deleted printer ' + printer_id)
+        LOGGER.debug('Deleted printer ' + printer_id)
 
     def add_printer(self, name, description, ppd):
         self.auth.session.post(
@@ -235,8 +233,7 @@ class CloudPrintProxy(object):
                 'capsHash': hashlib.sha1(ppd.encode('utf-8')).hexdigest(),
            },
         ).raise_for_status()
-        if self.verbose:
-            LOGGER.info('Added Printer ' + name)
+        LOGGER.debug('Added Printer ' + name)
 
     def update_printer(self, printer_id, name, description, ppd):
         self.auth.session.post(
@@ -253,8 +250,7 @@ class CloudPrintProxy(object):
                 'capsHash': hashlib.sha1(ppd.encode('utf-8')).hexdigest(),
            },
         ).raise_for_status()
-        if self.verbose:
-            LOGGER.info('Updated Printer ' + name)
+        LOGGER.debug('Updated Printer ' + name)
 
     def get_jobs(self, printer_id):
         docs = self.auth.session.post(
@@ -279,8 +275,7 @@ class CloudPrintProxy(object):
                 'status': 'DONE',
            },
         ).json()
-        if self.verbose:
-            LOGGER.info('Finished Job' + job_id)
+        LOGGER.debug('Finished Job' + job_id)
 
     def fail_job(self, job_id):
         self.auth.session.post(
@@ -291,8 +286,7 @@ class CloudPrintProxy(object):
                 'status': 'ERROR',
            },
         ).json()
-        if self.verbose:
-            LOGGER.info('Failed Job' + job_id)
+        LOGGER.debug('Failed Job' + job_id)
 
 
 class PrinterProxy(object):
@@ -463,6 +457,12 @@ def main():
     if args.verbose:
         LOGGER.info('Setting DEBUG-level logging')
         LOGGER.setLevel(logging.DEBUG)
+
+        import httplib
+        httplib.HTTPConnection.debuglevel = 1
+        requests_log = logging.getLogger("requests.packages.urllib3")
+        requests_log.setLevel(logging.DEBUG)
+        requests_log.propagate = True
 
     auth = CloudPrintAuth(args.authfile)
     if args.logout:
