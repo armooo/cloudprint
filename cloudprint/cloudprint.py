@@ -305,21 +305,6 @@ class PrinterProxy(object):
         return self.cpp.delete_printer(self.id)
 
 
-class App(object):
-    def __init__(self, cups_connection=None, cpp=None, printers=None, pidfile_path=None):
-        self.cups_connection = cups_connection
-        self.cpp = cpp
-        self.printers = printers
-        self.pidfile_path = pidfile_path
-        self.stdin_path = '/dev/null'
-        self.stdout_path = '/dev/null'
-        self.stderr_path = '/dev/null'
-        self.pidfile_timeout = 5
-
-    def run(self):
-        process_jobs(self.cups_connection, self.cpp)
-
-
 #True if printer name matches *any* of the regular expressions in regexps
 def match_re(prn, regexps, empty=False):
     if len(regexps):
@@ -498,21 +483,20 @@ def main():
 
     if args.daemon:
         try:
-            from daemon import runner
+            import daemon
+            import daemon.pidfile
         except ImportError:
             print 'daemon module required for -d'
             print '\tyum install python-daemon, or apt-get install python-daemon, or pip install python-daemon'
             sys.exit(1)
 
-        # XXX printers is the google list
-        app = App(
-            cups_connection=cups_connection,
-            cpp=cpp,
-            pidfile_path=os.path.abspath(args.pidfile)
+        pidfile = daemon.pidfile.TimeoutPIDLockFile(
+            path=os.path.abspath(args.pidfile),
+            timeout=5,
         )
-        sys.argv = [sys.argv[0], 'start']
-        daemon_runner = runner.DaemonRunner(app)
-        daemon_runner.do_action()
+        with daemon.DaemonContext(pidfile=pidfile):
+            process_jobs(cups_connection, cpp)
+
     else:
         process_jobs(cups_connection, cpp)
 
