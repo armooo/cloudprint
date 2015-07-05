@@ -126,7 +126,7 @@ class CloudPrintAuth(object):
 
         self.xmpp_jid = poll['xmpp_jid']
         self.email = poll['user_email']
-        print 'Printer clammed by {0}.'.format(self.email)
+        print 'Printer claimed by {0}.'.format(self.email)
 
         token = requests.post(
             'https://accounts.google.com/o/oauth2/token',
