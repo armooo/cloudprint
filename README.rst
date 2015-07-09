@@ -72,6 +72,8 @@ Install
 ::
 
   pip install cloudprint
+  or with optional daemon support
+  pip install cloudprint[daemon]
 
 After running cloudprint, verify that the connector successfully installed the cloud printer by visiting
 http://www.google.com/cloudprint/manage.html.

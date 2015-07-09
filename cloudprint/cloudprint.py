@@ -487,7 +487,7 @@ def main():
             import daemon.pidfile
         except ImportError:
             print 'daemon module required for -d'
-            print '\tyum install python-daemon, or apt-get install python-daemon, or pip install python-daemon'
+            print '\tyum install python-daemon, or apt-get install python-daemon, or pip install cloudprint[daemon]'
             sys.exit(1)
 
         pidfile = daemon.pidfile.TimeoutPIDLockFile(
