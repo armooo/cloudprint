@@ -29,8 +29,9 @@ setup(
         ],
     },
     install_requires=[
-        'requests >= 2.7.0',
+        'argparse',
         'pycups',
+        'requests >= 2.7.0',
     ],
     extras_require={
         'daemon': ['python-daemon >= 2.0.0'],
