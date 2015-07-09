@@ -342,7 +342,7 @@ def sync_printers(cups_connection, cpp):
             ppd, description = get_printer_info(cups_connection, printer_name)
             cpp.add_printer(printer_name, description, ppd)
         except (cups.IPPError, UnicodeDecodeError):
-            LOGGER.info('Skipping ' + printer_name)
+            LOGGER.exception('Skipping ' + printer_name)
 
     #Existing printers
     for printer_name in local_printer_names & remote_printer_names:
