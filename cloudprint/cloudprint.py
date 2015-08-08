@@ -22,6 +22,7 @@ import argparse
 import cups
 import datetime
 import hashlib
+import io
 import json
 import logging
 import logging.handlers
@@ -335,11 +336,12 @@ def match_re(prn, regexps, empty=False):
 
 
 def get_printer_info(cups_connection, printer_name):
-        with open(cups_connection.getPPD(printer_name)) as ppd_file:
-            ppd = ppd_file.read()
         # This is bad it should use the LanguageEncoding in the PPD
         # But a lot of utf-8 PPDs seem to say they are ISOLatin1
-        ppd = ppd.decode('utf-8')
+        ppd_path = cups_connection.getPPD(printer_name)
+        with io.open(ppd_path, encoding='utf-8') as ppd_file:
+            ppd = ppd_file.read()
+
         printer_attrs = cups_connection.getPrinterAttributes(printer_name)
         description = printer_attrs['printer-info']
         return ppd, description
@@ -391,7 +393,7 @@ def process_job(cups_connection, cpp, printer, job):
         if 'request' in options:
             del options['request']
 
-        options = dict((str(k), str(v)) for k, v in options.items())
+        options = dict((str(k), str(v)) for k, v in list(options.items()))
 
         # Cap the title length to 255, or cups will complain about invalid
         # job-name
@@ -463,8 +465,8 @@ def main(args):
         LOGGER.info('Setting DEBUG-level logging')
         LOGGER.setLevel(logging.DEBUG)
 
-        import httplib
-        httplib.HTTPConnection.debuglevel = 1
+        import http.client
+        http.client.HTTPConnection.debuglevel = 1
         requests_log = logging.getLogger("requests.packages.urllib3")
         requests_log.setLevel(logging.DEBUG)
         requests_log.propagate = True
@@ -485,7 +487,7 @@ def main(args):
     cpp.include = args.include
     cpp.exclude = args.exclude
 
-    printers = cups_connection.getPrinters().keys()
+    printers = list(cups_connection.getPrinters().keys())
     if not printers:
         LOGGER.error('No printers found')
         return
