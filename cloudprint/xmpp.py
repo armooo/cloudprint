@@ -238,7 +238,7 @@ class XmppConnection(object):
                 if waittime < 0:
                     waittime = 0
 
-                sock = self._xmppsock
+                sock = self._wrappedsock
                 (r, w, e) = select.select([sock], [], [sock], waittime)
 
                 now = time.time()
