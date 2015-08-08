@@ -465,8 +465,12 @@ def main(args):
         LOGGER.info('Setting DEBUG-level logging')
         LOGGER.setLevel(logging.DEBUG)
 
-        import http.client
-        http.client.HTTPConnection.debuglevel = 1
+        try:
+            import http.client as httpclient
+        except ImportError:
+            import httplib as httpclient
+        httpclient.HTTPConnection.debuglevel = 1
+
         requests_log = logging.getLogger("requests.packages.urllib3")
         requests_log.setLevel(logging.DEBUG)
         requests_log.propagate = True
