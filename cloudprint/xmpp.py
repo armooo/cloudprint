@@ -32,6 +32,7 @@ class XmppXmlHandler(object):
     def __init__(self):
         self._stack = 0
         self._builder = TreeBuilder()
+        self._builder.start('root', {})
         self._results = deque()
 
     def data(self, data):
