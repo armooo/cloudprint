@@ -36,7 +36,6 @@ import tempfile
 import time
 import uuid
 
-import xmpp
 
 XMPP_SERVER_HOST = 'talk.google.com'
 XMPP_SERVER_PORT = 5223
@@ -596,4 +595,7 @@ if __name__ == '__main__':
         help='verbose logging',
     )
     args = parser.parse_args()
+    import xmpp
     main(args)
+else:
+    from . import xmpp
