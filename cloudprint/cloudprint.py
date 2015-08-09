@@ -71,6 +71,10 @@ CLIENT_ID = ('607830223128-rqenc3ekjln2qi4m4ntudskhnsqn82gn'
 CLIENT_KEY = 'T0azsx2lqDztSRyPHQaERJJH'
 
 
+def unicode_escape(string):
+    return string.encode('unicode-escape').decode('ascii')
+
+
 class CloudPrintAuth(object):
     AUTH_POLL_PERIOD = 10.0
 
@@ -404,7 +408,7 @@ def process_job(cups_connection, cpp, printer, job):
             options,
         )
         os.unlink(tmp.name)
-        LOGGER.info('SUCCESS ' + job['title'].encode('unicode-escape'))
+        LOGGER.info(unicode_escape('SUCCESS ' + job['title']))
 
         cpp.finish_job(job['id'])
         num_retries = 0
@@ -413,12 +417,11 @@ def process_job(cups_connection, cpp, printer, job):
         if num_retries >= RETRIES:
             num_retries = 0
             cpp.fail_job(job['id'])
-            LOGGER.error('ERROR ' + job['title'].encode('unicode-escape'))
+            LOGGER.error(unicode_escape('ERROR ' + job['title']))
         else:
             num_retries += 1
             LOGGER.info(
-                'Job %s failed - Will retry' %
-                job['title'].encode('unicode-escape')
+                unicode_escape('Job %s failed - Will retry' % job['title'])
             )
 
 
