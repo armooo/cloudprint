@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU General Public License
 # along with cloudprint.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import print_function
+
 import argparse
 import cups
 import datetime
@@ -63,7 +65,8 @@ num_retries = 0
 LOGGER = logging.getLogger('cloudprint')
 LOGGER.setLevel(logging.INFO)
 
-CLIENT_ID = '607830223128-rqenc3ekjln2qi4m4ntudskhnsqn82gn.apps.googleusercontent.com'
+CLIENT_ID = ('607830223128-rqenc3ekjln2qi4m4ntudskhnsqn82gn'
+             '.apps.googleusercontent.com')
 CLIENT_KEY = 'T0azsx2lqDztSRyPHQaERJJH'
 
 
@@ -109,12 +112,14 @@ class CloudPrintAuth(object):
             },
             headers={'X-CloudPrint-Proxy': 'ArmoooIsAnOEM'},
         ).json()
-        print 'Goto {0} to clame this printer'.format(reg_data['complete_invite_url'])
+        print('Goto {0} to clame this printer'.format(
+            reg_data['complete_invite_url']
+        ))
 
         end = time.time() + int(reg_data['token_duration'])
         while time.time() < end:
             time.sleep(10)
-            print 'trying for the win'
+            print('trying for the win')
             poll = requests.get(
                 reg_data['polling_url'] + CLIENT_ID,
                 headers={'X-CloudPrint-Proxy': 'ArmoooIsAnOEM'},
@@ -122,11 +127,11 @@ class CloudPrintAuth(object):
             if poll['success']:
                 break
         else:
-            print 'The login request timedout'
+            print('The login request timedout')
 
         self.xmpp_jid = poll['xmpp_jid']
         self.email = poll['user_email']
-        print 'Printer claimed by {0}.'.format(self.email)
+        print('Printer claimed by {0}.'.format(self.email))
 
         token = requests.post(
             'https://accounts.google.com/o/oauth2/token',
@@ -206,7 +211,10 @@ class CloudPrintProxy(object):
                 'proxy': self.auth.guid,
             },
         ).json()
-        return [PrinterProxy(self, p['id'], p['name']) for p in printers['printers']]
+        return [
+            PrinterProxy(self, p['id'], p['name'])
+            for p in printers['printers']
+        ]
 
     def delete_printer(self, printer_id):
         self.auth.session.post(
@@ -214,7 +222,7 @@ class CloudPrintProxy(object):
             {
                 'output': 'json',
                 'printerid': printer_id,
-           },
+            },
         ).raise_for_status()
         LOGGER.debug('Deleted printer ' + printer_id)
 
@@ -230,7 +238,7 @@ class CloudPrintProxy(object):
                 'status': 'OK',
                 'description': description,
                 'capsHash': hashlib.sha1(ppd.encode('utf-8')).hexdigest(),
-           },
+            },
         ).raise_for_status()
         LOGGER.debug('Added Printer ' + name)
 
@@ -247,7 +255,7 @@ class CloudPrintProxy(object):
                 'status': 'OK',
                 'description': description,
                 'capsHash': hashlib.sha1(ppd.encode('utf-8')).hexdigest(),
-           },
+            },
         ).raise_for_status()
         LOGGER.debug('Updated Printer ' + name)
 
@@ -257,10 +265,10 @@ class CloudPrintProxy(object):
             {
                 'output': 'json',
                 'printerid': printer_id,
-           },
+            },
         ).json()
 
-        if not 'jobs' in docs:
+        if 'jobs' not in docs:
             return []
         else:
             return docs['jobs']
@@ -272,7 +280,7 @@ class CloudPrintProxy(object):
                 'output': 'json',
                 'jobid': job_id,
                 'status': 'DONE',
-           },
+            },
         ).json()
         LOGGER.debug('Finished Job' + job_id)
 
@@ -283,7 +291,7 @@ class CloudPrintProxy(object):
                 'output': 'json',
                 'jobid': job_id,
                 'status': 'ERROR',
-           },
+            },
         ).json()
         LOGGER.debug('Failed Job' + job_id)
 
@@ -305,13 +313,20 @@ class PrinterProxy(object):
         return self.cpp.delete_printer(self.id)
 
 
-#True if printer name matches *any* of the regular expressions in regexps
+# True if printer name matches *any* of the regular expressions in regexps
 def match_re(prn, regexps, empty=False):
     if len(regexps):
         try:
-            return re.match(regexps[0], prn, re.UNICODE) or match_re(prn, regexps[1:])
+            return (
+                re.match(regexps[0], prn, re.UNICODE)
+                or match_re(prn, regexps[1:])
+            )
         except Exception:
-            sys.stderr.write('cloudprint: invalid regular expression: ' + regexps[0] + '\n')
+            sys.stderr.write(
+                'cloudprint: invalid regular expression: ' +
+                regexps[0] +
+                '\n'
+            )
             sys.exit(1)
     else:
         return empty
@@ -320,10 +335,11 @@ def match_re(prn, regexps, empty=False):
 def get_printer_info(cups_connection, printer_name):
         with open(cups_connection.getPPD(printer_name)) as ppd_file:
             ppd = ppd_file.read()
-        #This is bad it should use the LanguageEncoding in the PPD
-        #But a lot of utf-8 PPDs seem to say they are ISOLatin1
+        # This is bad it should use the LanguageEncoding in the PPD
+        # But a lot of utf-8 PPDs seem to say they are ISOLatin1
         ppd = ppd.decode('utf-8')
-        description = cups_connection.getPrinterAttributes(printer_name)['printer-info']
+        printer_attrs = cups_connection.getPrinterAttributes(printer_name)
+        description = printer_attrs['printer-info']
         return ppd, description
 
 
@@ -332,11 +348,17 @@ def sync_printers(cups_connection, cpp):
     remote_printers = dict([(p.name, p) for p in cpp.get_printers()])
     remote_printer_names = set(remote_printers)
 
-    #Include/exclude local printers
-    local_printer_names = set([prn for prn in local_printer_names if match_re(prn, cpp.include, True)])
-    local_printer_names = set([prn for prn in local_printer_names if not match_re(prn, cpp.exclude)])
+    # Include/exclude local printers
+    local_printer_names = set([
+        prn for prn in local_printer_names
+        if match_re(prn, cpp.include, True)
+    ])
+    local_printer_names = set([
+        prn for prn in local_printer_names
+        if not match_re(prn, cpp.exclude)
+    ])
 
-    #New printers
+    # New printers
     for printer_name in local_printer_names - remote_printer_names:
         try:
             ppd, description = get_printer_info(cups_connection, printer_name)
@@ -344,12 +366,12 @@ def sync_printers(cups_connection, cpp):
         except (cups.IPPError, UnicodeDecodeError):
             LOGGER.exception('Skipping ' + printer_name)
 
-    #Existing printers
+    # Existing printers
     for printer_name in local_printer_names & remote_printer_names:
         ppd, description = get_printer_info(cups_connection, printer_name)
         remote_printers[printer_name].update(description, ppd)
 
-    #Printers that have left us
+    # Printers that have left us
     for printer_name in remote_printer_names - local_printer_names:
         remote_printers[printer_name].delete()
 
@@ -369,8 +391,14 @@ def process_job(cups_connection, cpp, printer, job):
 
         options = dict((str(k), str(v)) for k, v in options.items())
 
-        # Cap the title length to 255, or cups will complain about invalid job-name
-        cups_connection.printFile(printer.name, tmp.name, job['title'][:255], options)
+        # Cap the title length to 255, or cups will complain about invalid
+        # job-name
+        cups_connection.printFile(
+            printer.name,
+            tmp.name,
+            job['title'][:255],
+            options,
+        )
         os.unlink(tmp.name)
         LOGGER.info('SUCCESS ' + job['title'].encode('unicode-escape'))
 
@@ -384,7 +412,10 @@ def process_job(cups_connection, cpp, printer, job):
             LOGGER.error('ERROR ' + job['title'].encode('unicode-escape'))
         else:
             num_retries += 1
-            LOGGER.info('Job %s failed - Will retry' % job['title'].encode('unicode-escape'))
+            LOGGER.info(
+                'Job %s failed - Will retry' %
+                job['title'].encode('unicode-escape')
+            )
 
 
 def process_jobs(cups_connection, cpp):
@@ -404,36 +435,84 @@ def process_jobs(cups_connection, cpp):
 
         except Exception:
             global FAIL_RETRY
-            LOGGER.exception('ERROR: Could not Connect to Cloud Service. Will Try again in %d Seconds' % FAIL_RETRY)
+            LOGGER.exception(
+                'ERROR: Could not Connect to Cloud Service. '
+                'Will Try again in %d Seconds' %
+                FAIL_RETRY
+            )
             time.sleep(FAIL_RETRY)
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-d', dest='daemon', action='store_true',
-                        help='enable daemon mode (requires the daemon module)')
-    parser.add_argument('-l', dest='logout', action='store_true',
-                        help='logout of the google account')
-    parser.add_argument('-p', metavar='pid_file', dest='pidfile', default='cloudprint.pid',
-                        help='path to write the pid to (default %(default)s)')
-    parser.add_argument('-a', metavar='account_file', dest='authfile', default=os.path.expanduser('~/.cloudprintauth.json'),
-                        help='path to google account ident data (default %(default)s)')
-    parser.add_argument('-c', dest='authonly', action='store_true',
-                        help='establish and store login credentials, then exit')
-    parser.add_argument('-f', dest='fastpoll', action='store_true',
-                        help='use fast poll if notifications are not working')
-    parser.add_argument('-i', metavar='regexp', dest='include', default=[], action='append',
-                        help='include local printers matching %(metavar)s')
-    parser.add_argument('-x', metavar='regexp', dest='exclude', default=[], action='append',
-                        help='exclude local printers matching %(metavar)s')
-    parser.add_argument('-v', dest='verbose', action='store_true',
-                        help='verbose logging')
+    parser.add_argument(
+        '-d',
+        dest='daemon',
+        action='store_true',
+        help='enable daemon mode (requires the daemon module)',
+    )
+    parser.add_argument(
+        '-l',
+        dest='logout',
+        action='store_true',
+        help='logout of the google account',
+    )
+    parser.add_argument(
+        '-p',
+        metavar='pid_file',
+        dest='pidfile',
+        default='cloudprint.pid',
+        help='path to write the pid to (default %(default)s)',
+    )
+    parser.add_argument(
+        '-a',
+        metavar='account_file',
+        dest='authfile',
+        default=os.path.expanduser('~/.cloudprintauth.json'),
+        help='path to google account ident data (default %(default)s)',
+    )
+    parser.add_argument(
+        '-c',
+        dest='authonly',
+        action='store_true',
+        help='establish and store login credentials, then exit',
+    )
+    parser.add_argument(
+        '-f',
+        dest='fastpoll',
+        action='store_true',
+        help='use fast poll if notifications are not working',
+    )
+    parser.add_argument(
+        '-i',
+        metavar='regexp',
+        dest='include',
+        default=[],
+        action='append',
+        help='include local printers matching %(metavar)s',
+    )
+    parser.add_argument(
+        '-x',
+        metavar='regexp',
+        dest='exclude',
+        default=[],
+        action='append',
+        help='exclude local printers matching %(metavar)s',
+    )
+    parser.add_argument(
+        '-v',
+        dest='verbose',
+        action='store_true',
+        help='verbose logging',
+    )
     args = parser.parse_args()
 
     # if daemon, log to syslog, otherwise log to stdout
     if args.daemon:
         handler = logging.handlers.SysLogHandler()
-        handler.setFormatter(logging.Formatter(fmt='cloudprint.py: %(message)s'))
+        handler.setFormatter(
+            logging.Formatter(fmt='cloudprint.py: %(message)s')
+        )
     else:
         handler = logging.StreamHandler(sys.stdout)
     LOGGER.addHandler(handler)
@@ -486,8 +565,11 @@ def main():
             import daemon
             import daemon.pidfile
         except ImportError:
-            print 'daemon module required for -d'
-            print '\tyum install python-daemon, or apt-get install python-daemon, or pip install cloudprint[daemon]'
+            print('daemon module required for -d')
+            print(
+                '\tyum install python-daemon, or apt-get install'
+                'python-daemon, or pip install python-daemon'
+            )
             sys.exit(1)
 
         pidfile = daemon.pidfile.TimeoutPIDLockFile(

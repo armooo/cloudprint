@@ -131,7 +131,9 @@ class XmppConnection(object):
                     (host, port))
         self._xmppsock = socket.socket()
         self._wrappedsock = self._xmppsock
-        auth_string = base64.b64encode('\0{0}\0{1}'.format(auth.xmpp_jid, auth.access_token))
+        auth_string = base64.b64encode(
+            '\0{0}\0{1}'.format(auth.xmpp_jid, auth.access_token)
+        )
 
         try:
             self._wrappedsock = ssl.wrap_socket(self._xmppsock)
@@ -141,13 +143,43 @@ class XmppConnection(object):
             self._xmlparser = XMLParser(target=self._handler)
 
             # https://developers.google.com/cloud-print/docs/rawxmpp
-            self._msg('<stream:stream to="gmail.com" xml:lang="en" version="1.0" xmlns:stream="http://etherx.jabber.org/streams" xmlns="jabber:client">')
-            self._msg('<auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl" mechanism="X-OAUTH2">%s</auth>' % auth_string)
-            self._msg('<stream:stream to="gmail.com" xml:lang="en" version="1.0" xmlns:stream="http://etherx.jabber.org/streams" xmlns="jabber:client">')
-            iq = self._msg('<iq type="set" id="0"><bind xmlns="urn:ietf:params:xml:ns:xmpp-bind"><resource>cloud_print</resource></bind></iq>')
+            self._msg(
+                '<stream:stream to="gmail.com" xml:lang="en" version="1.0" '
+                'xmlns:stream="http://etherx.jabber.org/streams" '
+                'xmlns="jabber:client">'
+            )
+            self._msg(
+                '<auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl" '
+                'mechanism="X-OAUTH2">%s</auth>'
+                % auth_string
+            )
+            self._msg(
+                '<stream:stream to="gmail.com" xml:lang="en" version="1.0" '
+                'xmlns:stream="http://etherx.jabber.org/streams" '
+                'xmlns="jabber:client">'
+            )
+            iq = self._msg(
+                '<iq type="set" id="0">'
+                '<bind xmlns="urn:ietf:params:xml:ns:xmpp-bind">'
+                '<resource>cloud_print</resource>'
+                '</bind>'
+                '</iq>'
+            )
             bare_jid = iq[0][0].text.split('/')[0]
-            self._msg('<iq type="set" id="2"><session xmlns="urn:ietf:params:xml:ns:xmpp-session"/></iq>')
-            self._msg('<iq type="set" id="3" to="%s"><subscribe xmlns="google:push"><item channel="cloudprint.google.com" from="cloudprint.google.com"/></subscribe></iq>' % bare_jid)
+            self._msg(
+                '<iq type="set" id="2">'
+                '<session xmlns="urn:ietf:params:xml:ns:xmpp-session"/>'
+                '</iq>'
+            )
+            self._msg(
+                '<iq type="set" id="3" to="%s">'
+                '<subscribe xmlns="google:push">'
+                '<item channel="cloudprint.google.com" '
+                'from="cloudprint.google.com"/>'
+                '</subscribe>'
+                '</iq>'
+                % bare_jid
+            )
         except:
             self.close()
             raise
