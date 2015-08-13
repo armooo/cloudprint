@@ -1,0 +1,6 @@
+.tox/
+cloudprint.egg-info/
+cloudprint.pid
+cloudprint.pid.lock
+cloudprint/__pycache__/
+dist/
