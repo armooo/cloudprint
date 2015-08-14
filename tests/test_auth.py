@@ -1,20 +1,11 @@
 import datetime
 import json
 
-import pytest
-import requests_mock
-
 from cloudprint.cloudprint import (
     CLIENT_ID,
     PRINT_CLOUD_URL,
     CloudPrintAuth,
 )
-
-
-@pytest.yield_fixture
-def requests():
-    with requests_mock.Mocker() as m:
-        yield m
 
 
 def test_login(tmpdir, requests):
