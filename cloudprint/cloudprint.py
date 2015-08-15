@@ -424,25 +424,28 @@ def process_jobs(cups_connection, cpp):
     xmpp_conn = xmpp.XmppConnection(keepalive_period=KEEPALIVE)
 
     while True:
-        printers = cpp.get_printers()
-        try:
-            for printer in printers:
-                for job in printer.get_jobs():
-                    process_job(cups_connection, cpp, printer, job)
+        process_jobs_once(cups_connection, cpp, xmpp_conn)
 
-            if not xmpp_conn.is_connected():
-                xmpp_conn.connect(XMPP_SERVER_HOST, XMPP_SERVER_PORT, cpp.auth)
 
-            xmpp_conn.await_notification(cpp.sleeptime)
+def process_jobs_once(cups_connection, cpp, xmpp_conn):
+    printers = cpp.get_printers()
+    try:
+        for printer in printers:
+            for job in printer.get_jobs():
+                process_job(cups_connection, cpp, printer, job)
 
-        except Exception:
-            global FAIL_RETRY
-            LOGGER.exception(
-                'ERROR: Could not Connect to Cloud Service. '
-                'Will Try again in %d Seconds' %
-                FAIL_RETRY
-            )
-            time.sleep(FAIL_RETRY)
+        if not xmpp_conn.is_connected():
+            xmpp_conn.connect(XMPP_SERVER_HOST, XMPP_SERVER_PORT, cpp.auth)
+
+        xmpp_conn.await_notification(cpp.sleeptime)
+
+    except Exception:
+        LOGGER.exception(
+            'ERROR: Could not Connect to Cloud Service. '
+            'Will Try again in %d Seconds' %
+            FAIL_RETRY
+        )
+        time.sleep(FAIL_RETRY)
 
 
 def main(args):
