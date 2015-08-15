@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with cloudprint.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import absolute_import
 from __future__ import print_function
 
 import argparse
@@ -35,6 +36,8 @@ import sys
 import tempfile
 import time
 import uuid
+
+from cloudprint import xmpp
 
 
 XMPP_SERVER_HOST = 'talk.google.com'
@@ -452,7 +455,74 @@ def process_jobs_once(cups_connection, cpp, xmpp_conn):
         time.sleep(FAIL_RETRY)
 
 
-def main(args):
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '-d',
+        dest='daemon',
+        action='store_true',
+        help='enable daemon mode (requires the daemon module)',
+    )
+    parser.add_argument(
+        '-l',
+        dest='logout',
+        action='store_true',
+        help='logout of the google account',
+    )
+    parser.add_argument(
+        '-p',
+        metavar='pid_file',
+        dest='pidfile',
+        default='cloudprint.pid',
+        help='path to write the pid to (default %(default)s)',
+    )
+    parser.add_argument(
+        '-a',
+        metavar='account_file',
+        dest='authfile',
+        default=os.path.expanduser('~/.cloudprintauth.json'),
+        help='path to google account ident data (default %(default)s)',
+    )
+    parser.add_argument(
+        '-c',
+        dest='authonly',
+        action='store_true',
+        help='establish and store login credentials, then exit',
+    )
+    parser.add_argument(
+        '-f',
+        dest='fastpoll',
+        action='store_true',
+        help='use fast poll if notifications are not working',
+    )
+    parser.add_argument(
+        '-i',
+        metavar='regexp',
+        dest='include',
+        default=[],
+        action='append',
+        help='include local printers matching %(metavar)s',
+    )
+    parser.add_argument(
+        '-x',
+        metavar='regexp',
+        dest='exclude',
+        default=[],
+        action='append',
+        help='exclude local printers matching %(metavar)s',
+    )
+    parser.add_argument(
+        '-v',
+        dest='verbose',
+        action='store_true',
+        help='verbose logging',
+    )
+    return parser.parse_args()
+
+
+def main():
+    args = parse_args()
+
     # if daemon, log to syslog, otherwise log to stdout
     if args.daemon:
         handler = logging.handlers.SysLogHandler()
@@ -532,70 +602,6 @@ def main(args):
     else:
         process_jobs(cups_connection, cpp)
 
+
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '-d',
-        dest='daemon',
-        action='store_true',
-        help='enable daemon mode (requires the daemon module)',
-    )
-    parser.add_argument(
-        '-l',
-        dest='logout',
-        action='store_true',
-        help='logout of the google account',
-    )
-    parser.add_argument(
-        '-p',
-        metavar='pid_file',
-        dest='pidfile',
-        default='cloudprint.pid',
-        help='path to write the pid to (default %(default)s)',
-    )
-    parser.add_argument(
-        '-a',
-        metavar='account_file',
-        dest='authfile',
-        default=os.path.expanduser('~/.cloudprintauth.json'),
-        help='path to google account ident data (default %(default)s)',
-    )
-    parser.add_argument(
-        '-c',
-        dest='authonly',
-        action='store_true',
-        help='establish and store login credentials, then exit',
-    )
-    parser.add_argument(
-        '-f',
-        dest='fastpoll',
-        action='store_true',
-        help='use fast poll if notifications are not working',
-    )
-    parser.add_argument(
-        '-i',
-        metavar='regexp',
-        dest='include',
-        default=[],
-        action='append',
-        help='include local printers matching %(metavar)s',
-    )
-    parser.add_argument(
-        '-x',
-        metavar='regexp',
-        dest='exclude',
-        default=[],
-        action='append',
-        help='exclude local printers matching %(metavar)s',
-    )
-    parser.add_argument(
-        '-v',
-        dest='verbose',
-        action='store_true',
-        help='verbose logging',
-    )
-    args = parser.parse_args()
-    import xmpp
-    main(args)
-else:
-    from . import xmpp
+    main()

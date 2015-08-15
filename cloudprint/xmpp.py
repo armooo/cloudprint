@@ -13,6 +13,9 @@
 #
 # You should have received a copy of the GNU General Public License
 
+from __future__ import absolute_import
+from __future__ import print_function
+
 import base64
 import logging
 import ssl
