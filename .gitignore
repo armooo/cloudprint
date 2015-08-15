@@ -1,3 +1,4 @@
+.coverage
 .tox/
 cloudprint.egg-info/
 cloudprint.pid

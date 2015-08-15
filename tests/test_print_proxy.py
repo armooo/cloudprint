@@ -1,4 +1,7 @@
-import urlparse
+try:
+    import urlparse as parse
+except ImportError:
+    from urllib import parse
 
 import mock
 import pytest
@@ -49,7 +52,7 @@ def test_delete_printer(proxy, requests):
 
     proxy.delete_printer('1')
 
-    data = urlparse.parse_qs(requests.request_history[0].text)
+    data = parse.parse_qs(requests.request_history[0].text)
     assert data['printerid'][0] == '1'
 
 
@@ -65,7 +68,7 @@ def test_add_printer(proxy, requests):
         ppd='printer_ppd',
     )
 
-    data = urlparse.parse_qs(requests.request_history[0].text)
+    data = parse.parse_qs(requests.request_history[0].text)
     assert data['printer'][0] == 'printer_name'
     assert data['description'][0] == 'printer_description'
     assert data['capabilities'][0] == 'printer_ppd'
@@ -85,7 +88,7 @@ def test_update_printer(proxy, requests):
         ppd='printer_ppd',
     )
 
-    data = urlparse.parse_qs(requests.request_history[0].text)
+    data = parse.parse_qs(requests.request_history[0].text)
     assert data['printerid'][0] == '1'
     assert data['printer'][0] == 'printer_name'
     assert data['description'][0] == 'printer_description'
@@ -108,7 +111,7 @@ def test_get_jobs(proxy, requests):
         printer_id='1',
     )
 
-    data = urlparse.parse_qs(requests.request_history[0].text)
+    data = parse.parse_qs(requests.request_history[0].text)
     assert data['printerid'][0] == '1'
     assert jobs == ['job1', 'job2']
 
@@ -123,7 +126,7 @@ def test_finish_job(proxy, requests):
         job_id='1',
     )
 
-    data = urlparse.parse_qs(requests.request_history[0].text)
+    data = parse.parse_qs(requests.request_history[0].text)
     assert data['jobid'][0] == '1'
     assert data['status'][0] == 'DONE'
 
@@ -138,6 +141,6 @@ def test_fail_job(proxy, requests):
         job_id='1',
     )
 
-    data = urlparse.parse_qs(requests.request_history[0].text)
+    data = parse.parse_qs(requests.request_history[0].text)
     assert data['jobid'][0] == '1'
     assert data['status'][0] == 'ERROR'
