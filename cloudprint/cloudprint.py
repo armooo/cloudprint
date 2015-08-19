@@ -517,15 +517,28 @@ def parse_args():
         action='store_true',
         help='verbose logging',
     )
+    parser.add_argument(
+        '--syslog-address',
+        help='syslog address to use in daemon mode',
+    )
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
 
+    if args.syslog_address and not args.daemon:
+        print('syslog_address is only valid in daemon mode')
+        sys.exit(1)
+
     # if daemon, log to syslog, otherwise log to stdout
     if args.daemon:
-        handler = logging.handlers.SysLogHandler()
+        if args.syslog_address:
+            handler = logging.handlers.SysLogHandler(
+                address=args.syslog_address
+            )
+        else:
+            handler = logging.handlers.SysLogHandler()
         handler.setFormatter(
             logging.Formatter(fmt='cloudprint.py: %(message)s')
         )
