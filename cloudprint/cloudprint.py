@@ -121,7 +121,7 @@ class CloudPrintAuth(object):
             },
             headers={'X-CloudPrint-Proxy': 'ArmoooIsAnOEM'},
         ).json()
-        print('Goto {0} to clame this printer'.format(
+        print('Go to {0} to claim this printer'.format(
             reg_data['complete_invite_url']
         ))
 
