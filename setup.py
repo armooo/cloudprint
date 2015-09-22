@@ -29,7 +29,7 @@ setup(
         ],
     },
     install_requires=[
-        'argparse',
+        'configargparse',
         'pycups',
         'requests >= 2.7.0',
     ],

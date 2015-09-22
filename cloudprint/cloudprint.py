@@ -19,7 +19,7 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
-import argparse
+import configargparse
 import cups
 import datetime
 import hashlib
@@ -465,47 +465,50 @@ def process_jobs_once(cups_connection, cpp, xmpp_conn):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser()
+    parser = configargparse.ArgParser(
+        default_config_files=['/etc/cloudprint.conf',
+                              '~/.cloudprint.conf'],
+    )
     parser.add_argument(
-        '-d',
+        '-d', '--daemon',
         dest='daemon',
         action='store_true',
         help='enable daemon mode (requires the daemon module)',
     )
     parser.add_argument(
-        '-l',
+        '-l', '--logout',
         dest='logout',
         action='store_true',
         help='logout of the google account',
     )
     parser.add_argument(
-        '-p',
+        '-p', '--pidfile',
         metavar='pid_file',
         dest='pidfile',
         default='cloudprint.pid',
         help='path to write the pid to (default %(default)s)',
     )
     parser.add_argument(
-        '-a',
+        '-a', '--account_file',
         metavar='account_file',
         dest='authfile',
         default=os.path.expanduser('~/.cloudprintauth.json'),
         help='path to google account ident data (default %(default)s)',
     )
     parser.add_argument(
-        '-c',
+        '-c', '--credentials',
         dest='authonly',
         action='store_true',
         help='establish and store login credentials, then exit',
     )
     parser.add_argument(
-        '-f',
+        '-f', '--fastpoll',
         dest='fastpoll',
         action='store_true',
         help='use fast poll if notifications are not working',
     )
     parser.add_argument(
-        '-i',
+        '-i', '--include',
         metavar='regexp',
         dest='include',
         default=[],
@@ -513,7 +516,7 @@ def parse_args():
         help='include local printers matching %(metavar)s',
     )
     parser.add_argument(
-        '-x',
+        '-x', '--exclude',
         metavar='regexp',
         dest='exclude',
         default=[],
@@ -521,7 +524,7 @@ def parse_args():
         help='exclude local printers matching %(metavar)s',
     )
     parser.add_argument(
-        '-v',
+        '-v', '--verbose',
         dest='verbose',
         action='store_true',
         help='verbose logging',
