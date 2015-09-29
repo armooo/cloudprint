@@ -28,6 +28,7 @@ Usage
   -x regexp       : exclude filees matching regexp
                     regexp: a Python regexp, which is matched against the
                             start of the printer name
+  -s sitename     : one-word site-name that will prefix printers
   -h              : display this help
 
 Google accounts with 2 step verification enabled need to use an

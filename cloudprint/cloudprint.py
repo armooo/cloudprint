@@ -209,6 +209,7 @@ class CloudPrintProxy(object):
     def __init__(self, auth):
         self.auth = auth
         self.sleeptime = 0
+        self.site = ''
         self.include = []
         self.exclude = []
 
@@ -221,7 +222,11 @@ class CloudPrintProxy(object):
             },
         ).json()
         return [
-            PrinterProxy(self, p['id'], p['name'])
+            PrinterProxy(
+                self,
+                p['id'],
+                re.sub('^' + self.site + '-', '', p['name'])
+            )
             for p in printers['printers']
         ]
 
@@ -236,6 +241,8 @@ class CloudPrintProxy(object):
         LOGGER.debug('Deleted printer ' + printer_id)
 
     def add_printer(self, name, description, ppd):
+        if self.site:
+            name = self.site + '-' + name
         self.auth.session.post(
             PRINT_CLOUD_URL + 'register',
             {
@@ -252,6 +259,8 @@ class CloudPrintProxy(object):
         LOGGER.debug('Added Printer ' + name)
 
     def update_printer(self, printer_id, name, description, ppd):
+        if self.site:
+            name = self.site + '-' + name
         self.auth.session.post(
             PRINT_CLOUD_URL + 'update',
             {
@@ -521,6 +530,14 @@ def parse_args():
         '--syslog-address',
         help='syslog address to use in daemon mode',
     )
+    parser.add_argument(
+        '-s',
+        metavar='sitename',
+        dest='site',
+        default='',
+        help='one-word site-name that will prefix printers',
+    )
+
     return parser.parse_args()
 
 
@@ -575,6 +592,7 @@ def main():
 
     cpp.include = args.include
     cpp.exclude = args.exclude
+    cpp.site = args.site
 
     printers = list(cups_connection.getPrinters().keys())
     if not printers:

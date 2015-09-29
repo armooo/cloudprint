@@ -13,13 +13,35 @@ from cloudprint.cloudprint import (
 )
 
 
-@pytest.fixture
-def proxy():
+@pytest.fixture(params=('', 'prefix'))
+def proxy(request):
     auth = mock.Mock(session=requests)
-    return CloudPrintProxy(auth)
+    proxy = CloudPrintProxy(auth)
+    proxy.site = request.param
+    return proxy
 
 
-def test_get_printers(proxy, requests):
+@pytest.fixture
+def add_site(proxy):
+    def add_site(name):
+        if not proxy.site:
+            return name
+        else:
+            return '{0}-{1}'.format(proxy.site, name)
+    return add_site
+
+
+@pytest.fixture
+def remove_site(proxy):
+    def remove_site(name):
+        if not proxy.site:
+            return name
+        else:
+            return name.replace(proxy.site + '-', '')
+    return remove_site
+
+
+def test_get_printers(proxy, requests, remove_site):
     requests.post(
         PRINT_CLOUD_URL + 'list',
         json={
@@ -39,9 +61,9 @@ def test_get_printers(proxy, requests):
     printers = proxy.get_printers()
 
     assert printers[0].id == '1'
-    assert printers[0].name == 'printer 1'
+    assert remove_site(printers[0].name) == 'printer 1'
     assert printers[1].id == '2'
-    assert printers[1].name == 'printer 2'
+    assert remove_site(printers[1].name) == 'printer 2'
 
 
 def test_delete_printer(proxy, requests):
@@ -56,7 +78,7 @@ def test_delete_printer(proxy, requests):
     assert data['printerid'][0] == '1'
 
 
-def test_add_printer(proxy, requests):
+def test_add_printer(proxy, requests, add_site):
     requests.post(
         PRINT_CLOUD_URL + 'register',
         status_code=200,
@@ -69,13 +91,13 @@ def test_add_printer(proxy, requests):
     )
 
     data = parse.parse_qs(requests.request_history[0].text)
-    assert data['printer'][0] == 'printer_name'
+    assert data['printer'][0] == add_site('printer_name')
     assert data['description'][0] == 'printer_description'
     assert data['capabilities'][0] == 'printer_ppd'
     assert data['defaults'][0] == 'printer_ppd'
 
 
-def test_update_printer(proxy, requests):
+def test_update_printer(proxy, requests, add_site):
     requests.post(
         PRINT_CLOUD_URL + 'update',
         status_code=200,
@@ -90,7 +112,7 @@ def test_update_printer(proxy, requests):
 
     data = parse.parse_qs(requests.request_history[0].text)
     assert data['printerid'][0] == '1'
-    assert data['printer'][0] == 'printer_name'
+    assert data['printer'][0] == add_site('printer_name')
     assert data['description'][0] == 'printer_description'
     assert data['capabilities'][0] == 'printer_ppd'
     assert data['defaults'][0] == 'printer_ppd'
