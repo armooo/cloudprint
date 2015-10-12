@@ -618,7 +618,7 @@ def main():
         except ImportError:
             print('daemon module required for -d')
             print(
-                '\tyum install python-daemon, or apt-get install'
+                '\tyum install python-daemon, or apt-get install '
                 'python-daemon, or pip install python-daemon'
             )
             sys.exit(1)
