@@ -3,7 +3,7 @@ language: python
 cache:
   directories:
     - .tox
-    - $HOME/.pip-cache/
+    - $HOME/.cache/pip
 python:
   - "2.6"
   - "2.7"
