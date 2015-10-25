@@ -14,4 +14,4 @@ addons:
     packages:
         libcups2-dev
 install: pip install tox-travis
-script: tox
+script: tox -v
