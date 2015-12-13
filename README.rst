@@ -16,23 +16,23 @@ Usage
 ::
 
   cloudprint [<option> ...]
-  -d              : enable daemon mode (requires the daemon module)
-  -l              : logout of the current google account
-  -p pid_file     : path to write the pid to (default cloudprint.pid)
-  -a account_file : path to google account ident data (optional)
-  -c              : establish and store login credentials, then exit
-  -f              : 'fast poll', if notifications aren't working
-  -u              : store username/password in addition to login token
-                    to avoid authentication expiration
-  -i regexp       : include files matching regexp
-  -x regexp       : exclude filees matching regexp
-                    regexp: a Python regexp, which is matched against the
+  -d               : enable daemon mode (requires the daemon module)
+  -l               : logout of the current google account
+  -p pid_file      : path to write the pid to (default cloudprint.pid)
+  -a account_file  : path to google account ident data (optional)
+  -c               : establish and store login credentials, then exit
+  -f               : 'fast poll', if notifications aren't working
+  -i regexp        : include files matching regexp
+  -x regexp        : exclude filees matching regexp
+                     regexp: a Python regexp, which is matched against the
                             start of the printer name
-  -s sitename     : one-word site-name that will prefix printers
-  -h              : display this help
+  -s sitename      : one-word site-name that will prefix printers
+  -v               : verbose output
+  --syslog-address : syslog address to use in daemon mode
+  -h               : display this help
 
-Google accounts with 2 step verification enabled need to use an
-`application-specific password <http://www.google.com/support/accounts/bin/static.py?page=guide.cs&guide=1056283&topic=1056286>`_.
+
+If necessary, cloudprint will respond with a URL to be visited for OAuth2 authentication.
 
 Example
 ---------------------------------------------------
@@ -40,9 +40,10 @@ Example
 ::
 
   cloudprint
-  Google username: username@gmail.com
-  Password:
-  Added Printer Brother-HL-2170W
+  Go to http://google.com/18de674 to claim this printer
+  trying for the win
+  trying for the win
+  success
 
 Examples - Include/Exclude
 ---------------------------------------------------
