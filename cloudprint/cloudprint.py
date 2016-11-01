@@ -600,9 +600,18 @@ def main():
         return
 
     if auth.no_auth():
-        name = printers[0]
-        ppd, description = get_printer_info(cups_connection, name)
-        auth.login(name, description, ppd)
+        authed = False
+        for name in printers:
+            try:
+                ppd, description = get_printer_info(cups_connection, name)
+                auth.login(name, description, ppd)
+                authed = True
+                break
+            except (cups.IPPError):
+                LOGGER.error('Unable to login with: ' + name)
+        if not authed:
+            LOGGER.error('Unable to find any valid printer.')
+            return
     else:
         auth.load()
 
