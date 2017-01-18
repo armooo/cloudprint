@@ -611,7 +611,7 @@ def main():
                 LOGGER.error('Unable to login with: ' + name)
         if not authed:
             LOGGER.error('Unable to find any valid printer.')
-            return
+            sys.exit(-1)
     else:
         auth.load()
 
