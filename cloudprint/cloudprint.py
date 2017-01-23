@@ -534,7 +534,7 @@ def parse_args():
         help='syslog address to use in daemon mode',
     )
     parser.add_argument(
-        '-s',
+        '-s', '--sitename',
         metavar='sitename',
         dest='site',
         default='',
