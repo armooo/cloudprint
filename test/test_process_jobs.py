@@ -20,6 +20,7 @@ def test_print(requests, cups, cpp, xmpp_conn):
         'ticketUrl': 'http://ticket',
         'title': '*' * 300,
         'id': 'job_1',
+        'ownerId': 'owner@example.com'
     }]
 
     xmpp_conn.is_connected.return_value = True
@@ -43,6 +44,7 @@ def test_print(requests, cups, cpp, xmpp_conn):
         {
             'a': '1',
             'b': '2',
+            'job-originating-user-name': 'owner@example.com',
         },
     )
     cpp.finish_job.assert_called_with('job_1')
@@ -59,6 +61,7 @@ def test_retry(requests, cups, cpp, xmpp_conn):
         'ticketUrl': 'http://ticket',
         'title': '*' * 300,
         'id': 'job_1',
+        'ownerId': 'owner@example.com'
     }]
 
     requests.get(url='http://print_job.pdf', status_code=500)
@@ -77,6 +80,7 @@ def test_failed(requests, cups, cpp, xmpp_conn):
         'ticketUrl': 'http://ticket',
         'title': '*' * 300,
         'id': 'job_1',
+        'ownerId': 'owner@example.com'
     }]
 
     requests.get(url='http://print_job.pdf', status_code=500)

@@ -409,6 +409,7 @@ def process_job(cups_connection, cpp, printer, job):
             del options['request']
 
         options = dict((str(k), str(v)) for k, v in list(options.items()))
+        options['job-originating-user-name'] = job['ownerId']
 
         # Cap the title length to 255, or cups will complain about invalid
         # job-name
