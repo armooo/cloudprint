@@ -8,7 +8,7 @@ Google's linux connector, it does not require chrome to be installed on the serv
 Requires
 ---------------------------------------------------
 - python 2.6 or 2.7
-- pycups (can be tricky on OS X) wich depends on libcups2-dev
+- pycups (can be tricky on OS X) which depends on libcups2-dev
 
 Usage
 ---------------------------------------------------
